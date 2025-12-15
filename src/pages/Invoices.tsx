@@ -23,7 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { InvoiceForm } from '@/components/forms/InvoiceForm';
-import { Search, Plus } from 'lucide-react';
+import { ManualInvoiceForm } from '@/components/forms/ManualInvoiceForm';
+import { Search, Plus, FileText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
 
@@ -42,6 +43,7 @@ const Invoices = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [formOpen, setFormOpen] = useState(false);
+  const [manualFormOpen, setManualFormOpen] = useState(false);
 
   const statusLabels = {
     paid: t.invoices.statusPaid,
@@ -124,8 +126,12 @@ const Invoices = () => {
             </Select>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setFormOpen(true)}>
+            <Button variant="outline" onClick={() => setManualFormOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
+              {language === 'en' ? 'Add Invoice' : 'বিল যুক্ত করুন'}
+            </Button>
+            <Button onClick={() => setFormOpen(true)}>
+              <FileText className="h-4 w-4 mr-2" />
               {t.invoices.generateInvoice}
             </Button>
           </div>
@@ -197,6 +203,7 @@ const Invoices = () => {
       </div>
 
       <InvoiceForm open={formOpen} onOpenChange={setFormOpen} />
+      <ManualInvoiceForm open={manualFormOpen} onOpenChange={setManualFormOpen} />
     </MainLayout>
   );
 };
