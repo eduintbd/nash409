@@ -3,6 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useServiceRequests, useUpdateServiceRequest, useDeleteServiceRequest } from '@/hooks/useServiceRequests';
 import { useOwners } from '@/hooks/useOwners';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,29 +29,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const statusConfig = {
-  open: { icon: AlertCircle, color: 'bg-warning/10 text-warning border-warning/20', label: 'খোলা' },
-  'in-progress': { icon: Clock, color: 'bg-primary/10 text-primary border-primary/20', label: 'চলমান' },
-  resolved: { icon: CheckCircle, color: 'bg-success/10 text-success border-success/20', label: 'সমাধান' },
-  closed: { icon: CheckCircle, color: 'bg-muted text-muted-foreground border-border', label: 'বন্ধ' },
-};
-
-const priorityConfig = {
-  low: { color: 'bg-muted text-muted-foreground', label: 'কম' },
-  medium: { color: 'bg-blue-100 text-blue-700', label: 'মাঝারি' },
-  high: { color: 'bg-orange-100 text-orange-700', label: 'উচ্চ' },
-  urgent: { color: 'bg-red-100 text-red-700', label: 'জরুরি' },
-};
-
-const categoryLabels: Record<string, string> = {
-  plumbing: 'প্লাম্বিং',
-  electrical: 'ইলেকট্রিক্যাল',
-  elevator: 'লিফট',
-  'common-area': 'কমন এরিয়া',
-  other: 'অন্যান্য',
-};
-
 const ServiceRequests = () => {
+  const { t, language } = useLanguage();
   const { data: requests, isLoading } = useServiceRequests();
   const { data: owners } = useOwners();
   const updateRequest = useUpdateServiceRequest();
@@ -60,6 +40,28 @@ const ServiceRequests = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const statusConfig = {
+    open: { icon: AlertCircle, color: 'bg-warning/10 text-warning border-warning/20', label: t.serviceRequests.open },
+    'in-progress': { icon: Clock, color: 'bg-primary/10 text-primary border-primary/20', label: t.serviceRequests.inProgress },
+    resolved: { icon: CheckCircle, color: 'bg-success/10 text-success border-success/20', label: t.serviceRequests.resolved },
+    closed: { icon: CheckCircle, color: 'bg-muted text-muted-foreground border-border', label: t.serviceRequests.closed },
+  };
+
+  const priorityConfig = {
+    low: { color: 'bg-muted text-muted-foreground', label: t.serviceRequests.priLow },
+    medium: { color: 'bg-blue-100 text-blue-700', label: t.serviceRequests.priMedium },
+    high: { color: 'bg-orange-100 text-orange-700', label: t.serviceRequests.priHigh },
+    urgent: { color: 'bg-red-100 text-red-700', label: t.serviceRequests.priUrgent },
+  };
+
+  const categoryLabels: Record<string, string> = {
+    plumbing: t.serviceRequests.catPlumbing,
+    electrical: t.serviceRequests.catElectrical,
+    elevator: t.serviceRequests.catElevator,
+    'common-area': t.serviceRequests.catCommonArea,
+    other: t.serviceRequests.catOther,
+  };
 
   const filteredRequests = requests?.filter(request => {
     const matchesSearch = request.title.toLowerCase().includes(search.toLowerCase());
@@ -88,30 +90,32 @@ const ServiceRequests = () => {
     }
   };
 
+  const locale = language === 'bn' ? 'bn-BD' : 'en-US';
+
   return (
     <MainLayout>
       <Header 
-        title="সার্ভিস অনুরোধ" 
-        subtitle="মেরামত ও রক্ষণাবেক্ষণ অনুরোধ ট্র্যাক করুন"
+        title={t.serviceRequests.title} 
+        subtitle={t.serviceRequests.subtitle}
       />
       
       <div className="p-6 space-y-6 animate-fade-in">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="stat-card bg-warning/5">
-            <p className="text-sm text-muted-foreground">খোলা</p>
+            <p className="text-sm text-muted-foreground">{t.serviceRequests.open}</p>
             <p className="text-2xl font-bold mt-1 text-warning">{openCount}</p>
           </div>
           <div className="stat-card bg-primary/5">
-            <p className="text-sm text-muted-foreground">চলমান</p>
+            <p className="text-sm text-muted-foreground">{t.serviceRequests.inProgress}</p>
             <p className="text-2xl font-bold mt-1 text-primary">{inProgressCount}</p>
           </div>
           <div className="stat-card bg-success/5">
-            <p className="text-sm text-muted-foreground">সমাধান</p>
+            <p className="text-sm text-muted-foreground">{t.serviceRequests.resolved}</p>
             <p className="text-2xl font-bold mt-1 text-success">{resolvedCount}</p>
           </div>
           <div className="stat-card">
-            <p className="text-sm text-muted-foreground">মোট</p>
+            <p className="text-sm text-muted-foreground">{t.serviceRequests.total}</p>
             <p className="text-2xl font-bold mt-1">{requests?.length || 0}</p>
           </div>
         </div>
@@ -122,7 +126,7 @@ const ServiceRequests = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="অনুরোধ খুঁজুন..."
+                placeholder={t.serviceRequests.searchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -130,20 +134,20 @@ const ServiceRequests = () => {
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="অবস্থা" />
+                <SelectValue placeholder={t.common.status} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">সকল</SelectItem>
-                <SelectItem value="open">খোলা</SelectItem>
-                <SelectItem value="in-progress">চলমান</SelectItem>
-                <SelectItem value="resolved">সমাধান</SelectItem>
-                <SelectItem value="closed">বন্ধ</SelectItem>
+                <SelectItem value="all">{t.common.all}</SelectItem>
+                <SelectItem value="open">{t.serviceRequests.open}</SelectItem>
+                <SelectItem value="in-progress">{t.serviceRequests.inProgress}</SelectItem>
+                <SelectItem value="resolved">{t.serviceRequests.resolved}</SelectItem>
+                <SelectItem value="closed">{t.serviceRequests.closed}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <Button onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            নতুন অনুরোধ
+            {t.serviceRequests.newRequest}
           </Button>
         </div>
 
@@ -154,7 +158,7 @@ const ServiceRequests = () => {
           </div>
         ) : filteredRequests.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            <p>কোনো অনুরোধ নেই</p>
+            <p>{t.serviceRequests.noRequests}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -174,7 +178,7 @@ const ServiceRequests = () => {
                           <CardTitle className="text-base leading-tight">{request.title}</CardTitle>
                           <CardDescription className="flex items-center gap-1 mt-1">
                             <Building2 className="h-3 w-3" />
-                            {request.flats?.flat_number} • {owner?.name || 'অজানা'}
+                            {request.flats?.flat_number} • {owner?.name || (language === 'bn' ? 'অজানা' : 'Unknown')}
                           </CardDescription>
                         </div>
                       </div>
@@ -185,7 +189,7 @@ const ServiceRequests = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {request.description || 'কোনো বিবরণ নেই'}
+                      {request.description || t.serviceRequests.noDescription}
                     </p>
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
@@ -209,18 +213,18 @@ const ServiceRequests = () => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="open">খোলা</SelectItem>
-                            <SelectItem value="in-progress">চলমান</SelectItem>
-                            <SelectItem value="resolved">সমাধান</SelectItem>
-                            <SelectItem value="closed">বন্ধ</SelectItem>
+                            <SelectItem value="open">{t.serviceRequests.open}</SelectItem>
+                            <SelectItem value="in-progress">{t.serviceRequests.inProgress}</SelectItem>
+                            <SelectItem value="resolved">{t.serviceRequests.resolved}</SelectItem>
+                            <SelectItem value="closed">{t.serviceRequests.closed}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     )}
                     
                     <div className="text-xs text-muted-foreground flex justify-between">
-                      <span>তৈরি: {new Date(request.created_at).toLocaleDateString('bn-BD')}</span>
-                      {request.employees?.name && <span>দায়িত্ব: {request.employees.name}</span>}
+                      <span>{t.serviceRequests.created}: {new Date(request.created_at).toLocaleDateString(locale)}</span>
+                      {request.employees?.name && <span>{t.serviceRequests.assignedTo}: {request.employees.name}</span>}
                     </div>
                   </CardContent>
                 </Card>
@@ -235,12 +239,12 @@ const ServiceRequests = () => {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-            <AlertDialogDescription>এই অনুরোধটি মুছে ফেলা হবে।</AlertDialogDescription>
+            <AlertDialogTitle>{t.common.confirmDelete}</AlertDialogTitle>
+            <AlertDialogDescription>{t.common.deleteWarning}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>বাতিল</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive">মুছে ফেলুন</AlertDialogAction>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive">{t.common.delete}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
