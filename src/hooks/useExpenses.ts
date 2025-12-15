@@ -64,7 +64,7 @@ export const useCreateExpense = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      toast({ title: 'খরচ যুক্ত হয়েছে' });
+      toast({ title: 'Expense added / খরচ যুক্ত হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -88,7 +88,7 @@ export const useUpdateExpense = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      toast({ title: 'খরচ আপডেট হয়েছে' });
+      toast({ title: 'Expense updated / খরচ আপডেট হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -106,7 +106,7 @@ export const useDeleteExpense = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      toast({ title: 'খরচ মুছে ফেলা হয়েছে' });
+      toast({ title: 'Expense deleted / খরচ মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

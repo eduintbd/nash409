@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useGenerateBulkInvoices } from '@/hooks/useInvoices';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface InvoiceFormProps {
   open: boolean;
@@ -34,6 +35,7 @@ const monthsBangla = [
 ];
 
 export const InvoiceForm = ({ open, onOpenChange }: InvoiceFormProps) => {
+  const { language } = useLanguage();
   const generateBulk = useGenerateBulkInvoices();
   const currentDate = new Date();
   
@@ -41,7 +43,7 @@ export const InvoiceForm = ({ open, onOpenChange }: InvoiceFormProps) => {
     month: months[currentDate.getMonth()],
     year: currentDate.getFullYear().toString(),
     amount: '3000',
-    description: 'মাসিক সার্ভিস চার্জ',
+    description: language === 'bn' ? 'মাসিক সার্ভিস চার্জ' : 'Monthly Service Charge',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,31 +59,45 @@ export const InvoiceForm = ({ open, onOpenChange }: InvoiceFormProps) => {
     onOpenChange(false);
   };
 
+  const t = {
+    title: language === 'bn' ? 'বিল তৈরি করুন' : 'Generate Invoices',
+    description: language === 'bn' ? 'সকল অকুপায়েড ফ্ল্যাটের জন্য বিল তৈরি হবে' : 'Invoices will be generated for all occupied flats',
+    month: language === 'bn' ? 'মাস' : 'Month',
+    year: language === 'bn' ? 'বছর' : 'Year',
+    amount: language === 'bn' ? 'পরিমাণ (৳)' : 'Amount (৳)',
+    invoiceDescription: language === 'bn' ? 'বিবরণ' : 'Description',
+    descriptionPlaceholder: language === 'bn' ? 'মাসিক সার্ভিস চার্জ' : 'Monthly Service Charge',
+    cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
+    submit: language === 'bn' ? 'বিল তৈরি করুন' : 'Generate Invoices',
+  };
+
+  const monthLabels = language === 'bn' ? monthsBangla : months;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>বিল তৈরি করুন</DialogTitle>
-          <DialogDescription>সকল অকুপায়েড ফ্ল্যাটের জন্য বিল তৈরি হবে</DialogDescription>
+          <DialogTitle>{t.title}</DialogTitle>
+          <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="month">মাস *</Label>
+              <Label htmlFor="month">{t.month} *</Label>
               <Select value={formData.month} onValueChange={(v) => setFormData({ ...formData, month: v })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {months.map((month, i) => (
-                    <SelectItem key={month} value={month}>{monthsBangla[i]}</SelectItem>
+                    <SelectItem key={month} value={month}>{monthLabels[i]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="year">বছর *</Label>
+              <Label htmlFor="year">{t.year} *</Label>
               <Input
                 id="year"
                 type="number"
@@ -93,7 +109,7 @@ export const InvoiceForm = ({ open, onOpenChange }: InvoiceFormProps) => {
           </div>
           
           <div>
-            <Label htmlFor="amount">পরিমাণ (৳) *</Label>
+            <Label htmlFor="amount">{t.amount} *</Label>
             <Input
               id="amount"
               type="number"
@@ -105,21 +121,21 @@ export const InvoiceForm = ({ open, onOpenChange }: InvoiceFormProps) => {
           </div>
           
           <div>
-            <Label htmlFor="description">বিবরণ</Label>
+            <Label htmlFor="description">{t.invoiceDescription}</Label>
             <Input
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="মাসিক সার্ভিস চার্জ"
+              placeholder={t.descriptionPlaceholder}
             />
           </div>
           
           <div className="flex gap-2 justify-end pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              বাতিল
+              {t.cancel}
             </Button>
             <Button type="submit" disabled={generateBulk.isPending}>
-              বিল তৈরি করুন
+              {t.submit}
             </Button>
           </div>
         </form>

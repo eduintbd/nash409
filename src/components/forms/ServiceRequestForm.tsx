@@ -20,28 +20,15 @@ import {
 import { useCreateServiceRequest } from '@/hooks/useServiceRequests';
 import { useFlats } from '@/hooks/useFlats';
 import { useEmployees } from '@/hooks/useEmployees';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ServiceRequestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const categories = [
-  { value: 'plumbing', label: 'প্লাম্বিং' },
-  { value: 'electrical', label: 'ইলেকট্রিক্যাল' },
-  { value: 'elevator', label: 'লিফট' },
-  { value: 'common-area', label: 'কমন এরিয়া' },
-  { value: 'other', label: 'অন্যান্য' },
-];
-
-const priorities = [
-  { value: 'low', label: 'কম' },
-  { value: 'medium', label: 'মাঝারি' },
-  { value: 'high', label: 'উচ্চ' },
-  { value: 'urgent', label: 'জরুরি' },
-];
-
 export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormProps) => {
+  const { language } = useLanguage();
   const { data: flats } = useFlats();
   const { data: employees } = useEmployees();
   const createRequest = useCreateServiceRequest();
@@ -86,20 +73,52 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
     onOpenChange(false);
   };
 
+  const categories = [
+    { value: 'plumbing', label: language === 'bn' ? 'প্লাম্বিং' : 'Plumbing' },
+    { value: 'electrical', label: language === 'bn' ? 'ইলেকট্রিক্যাল' : 'Electrical' },
+    { value: 'elevator', label: language === 'bn' ? 'লিফট' : 'Elevator' },
+    { value: 'common-area', label: language === 'bn' ? 'কমন এরিয়া' : 'Common Area' },
+    { value: 'other', label: language === 'bn' ? 'অন্যান্য' : 'Other' },
+  ];
+
+  const priorities = [
+    { value: 'low', label: language === 'bn' ? 'কম' : 'Low' },
+    { value: 'medium', label: language === 'bn' ? 'মাঝারি' : 'Medium' },
+    { value: 'high', label: language === 'bn' ? 'উচ্চ' : 'High' },
+    { value: 'urgent', label: language === 'bn' ? 'জরুরি' : 'Urgent' },
+  ];
+
+  const t = {
+    title: language === 'bn' ? 'নতুন সার্ভিস অনুরোধ' : 'New Service Request',
+    description: language === 'bn' ? 'মেরামত বা সার্ভিসের জন্য অনুরোধ করুন' : 'Submit a repair or service request',
+    flat: language === 'bn' ? 'ফ্ল্যাট' : 'Flat',
+    flatPlaceholder: language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Select flat',
+    requestTitle: language === 'bn' ? 'শিরোনাম' : 'Title',
+    titlePlaceholder: language === 'bn' ? 'সমস্যার শিরোনাম' : 'Issue title',
+    category: language === 'bn' ? 'ক্যাটাগরি' : 'Category',
+    priority: language === 'bn' ? 'অগ্রাধিকার' : 'Priority',
+    requestDescription: language === 'bn' ? 'বিবরণ' : 'Description',
+    descriptionPlaceholder: language === 'bn' ? 'সমস্যার বিস্তারিত বিবরণ' : 'Detailed description of the issue',
+    assignedTo: language === 'bn' ? 'দায়িত্বপ্রাপ্ত' : 'Assigned To',
+    assigneePlaceholder: language === 'bn' ? 'কর্মচারী নির্বাচন করুন' : 'Select employee',
+    cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
+    submit: language === 'bn' ? 'যুক্ত করুন' : 'Submit',
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>নতুন সার্ভিস অনুরোধ</DialogTitle>
-          <DialogDescription>মেরামত বা সার্ভিসের জন্য অনুরোধ করুন</DialogDescription>
+          <DialogTitle>{t.title}</DialogTitle>
+          <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="flat_id">ফ্ল্যাট *</Label>
+            <Label htmlFor="flat_id">{t.flat} *</Label>
             <Select value={formData.flat_id} onValueChange={(v) => setFormData({ ...formData, flat_id: v })}>
               <SelectTrigger>
-                <SelectValue placeholder="ফ্ল্যাট নির্বাচন করুন" />
+                <SelectValue placeholder={t.flatPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {flats?.map(flat => (
@@ -112,19 +131,19 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
           </div>
           
           <div>
-            <Label htmlFor="title">শিরোনাম *</Label>
+            <Label htmlFor="title">{t.requestTitle} *</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="সমস্যার শিরোনাম"
+              placeholder={t.titlePlaceholder}
               required
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="category">ক্যাটাগরি</Label>
+              <Label htmlFor="category">{t.category}</Label>
               <Select value={formData.category} onValueChange={(v: any) => setFormData({ ...formData, category: v })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -137,7 +156,7 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
               </Select>
             </div>
             <div>
-              <Label htmlFor="priority">অগ্রাধিকার</Label>
+              <Label htmlFor="priority">{t.priority}</Label>
               <Select value={formData.priority} onValueChange={(v: any) => setFormData({ ...formData, priority: v })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -152,20 +171,20 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
           </div>
           
           <div>
-            <Label htmlFor="description">বিবরণ</Label>
+            <Label htmlFor="description">{t.requestDescription}</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="সমস্যার বিস্তারিত বিবরণ"
+              placeholder={t.descriptionPlaceholder}
             />
           </div>
           
           <div>
-            <Label htmlFor="assigned_to">দায়িত্বপ্রাপ্ত</Label>
+            <Label htmlFor="assigned_to">{t.assignedTo}</Label>
             <Select value={formData.assigned_to} onValueChange={(v) => setFormData({ ...formData, assigned_to: v })}>
               <SelectTrigger>
-                <SelectValue placeholder="কর্মচারী নির্বাচন করুন" />
+                <SelectValue placeholder={t.assigneePlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {employees?.map(emp => (
@@ -177,10 +196,10 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
           
           <div className="flex gap-2 justify-end pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              বাতিল
+              {t.cancel}
             </Button>
             <Button type="submit" disabled={createRequest.isPending}>
-              যুক্ত করুন
+              {t.submit}
             </Button>
           </div>
         </form>

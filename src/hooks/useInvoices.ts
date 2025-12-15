@@ -45,7 +45,7 @@ export const useCreateInvoice = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      toast({ title: 'বিল তৈরি হয়েছে' });
+      toast({ title: 'Invoice created / বিল তৈরি হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -69,7 +69,7 @@ export const useUpdateInvoice = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      toast({ title: 'বিল আপডেট হয়েছে' });
+      toast({ title: 'Invoice updated / বিল আপডেট হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -107,7 +107,7 @@ export const useGenerateBulkInvoices = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      toast({ title: 'সকল ফ্ল্যাটের বিল তৈরি হয়েছে' });
+      toast({ title: 'Invoices generated / সকল ফ্ল্যাটের বিল তৈরি হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

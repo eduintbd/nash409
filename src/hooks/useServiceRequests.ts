@@ -46,7 +46,7 @@ export const useCreateServiceRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service_requests'] });
-      toast({ title: 'অনুরোধ যুক্ত হয়েছে' });
+      toast({ title: 'Request added / অনুরোধ যুক্ত হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -70,7 +70,7 @@ export const useUpdateServiceRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service_requests'] });
-      toast({ title: 'অনুরোধ আপডেট হয়েছে' });
+      toast({ title: 'Request updated / অনুরোধ আপডেট হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -88,7 +88,7 @@ export const useDeleteServiceRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service_requests'] });
-      toast({ title: 'অনুরোধ মুছে ফেলা হয়েছে' });
+      toast({ title: 'Request deleted / অনুরোধ মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

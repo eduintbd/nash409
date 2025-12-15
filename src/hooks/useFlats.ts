@@ -42,7 +42,7 @@ export const useCreateFlat = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flats'] });
-      toast({ title: 'ফ্ল্যাট যোগ হয়েছে' });
+      toast({ title: 'Flat added / ফ্ল্যাট যোগ হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -66,7 +66,7 @@ export const useUpdateFlat = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flats'] });
-      toast({ title: 'ফ্ল্যাট আপডেট হয়েছে' });
+      toast({ title: 'Flat updated / ফ্ল্যাট আপডেট হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -87,7 +87,7 @@ export const useDeleteFlat = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flats'] });
-      toast({ title: 'ফ্ল্যাট মুছে ফেলা হয়েছে' });
+      toast({ title: 'Flat deleted / ফ্ল্যাট মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
