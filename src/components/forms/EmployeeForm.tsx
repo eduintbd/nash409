@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateEmployee, useUpdateEmployee } from '@/hooks/useEmployees';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface EmployeeFormProps {
   open: boolean;
@@ -33,14 +34,8 @@ interface EmployeeFormProps {
   };
 }
 
-const roleLabels = {
-  guard: 'গার্ড',
-  cleaner: 'ক্লিনার',
-  caretaker: 'কেয়ারটেকার',
-  other: 'অন্যান্য',
-};
-
 export const EmployeeForm = ({ open, onOpenChange, editData }: EmployeeFormProps) => {
+  const { language } = useLanguage();
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee();
   
@@ -100,31 +95,60 @@ export const EmployeeForm = ({ open, onOpenChange, editData }: EmployeeFormProps
     onOpenChange(false);
   };
 
+  const roleLabels = {
+    guard: language === 'bn' ? 'গার্ড' : 'Guard',
+    cleaner: language === 'bn' ? 'ক্লিনার' : 'Cleaner',
+    caretaker: language === 'bn' ? 'কেয়ারটেকার' : 'Caretaker',
+    other: language === 'bn' ? 'অন্যান্য' : 'Other',
+  };
+
+  const t = {
+    title: editData 
+      ? (language === 'bn' ? 'কর্মচারী সম্পাদনা' : 'Edit Employee')
+      : (language === 'bn' ? 'নতুন কর্মচারী যুক্ত করুন' : 'Add New Employee'),
+    description: language === 'bn' ? 'কর্মচারীর তথ্য দিন' : 'Enter employee details',
+    name: language === 'bn' ? 'নাম' : 'Name',
+    namePlaceholder: language === 'bn' ? 'কর্মচারীর নাম' : 'Employee name',
+    role: language === 'bn' ? 'পদবি' : 'Role',
+    rolePlaceholder: language === 'bn' ? 'পদবি নির্বাচন করুন' : 'Select role',
+    phone: language === 'bn' ? 'ফোন নম্বর' : 'Phone Number',
+    salary: language === 'bn' ? 'বেতন (৳)' : 'Salary (৳)',
+    shift: language === 'bn' ? 'শিফট' : 'Shift',
+    shiftPlaceholder: language === 'bn' ? 'সকাল ৮টা - রাত ৮টা' : '8 AM - 8 PM',
+    nid: language === 'bn' ? 'জাতীয় পরিচয়পত্র (NID)' : 'National ID (NID)',
+    nidPlaceholder: language === 'bn' ? 'NID নম্বর' : 'NID number',
+    joinDate: language === 'bn' ? 'যোগদানের তারিখ' : 'Join Date',
+    cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
+    submit: editData 
+      ? (language === 'bn' ? 'আপডেট করুন' : 'Update')
+      : (language === 'bn' ? 'যুক্ত করুন' : 'Add'),
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editData ? 'কর্মচারী সম্পাদনা' : 'নতুন কর্মচারী যুক্ত করুন'}</DialogTitle>
-          <DialogDescription>কর্মচারীর তথ্য দিন</DialogDescription>
+          <DialogTitle>{t.title}</DialogTitle>
+          <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">নাম *</Label>
+            <Label htmlFor="name">{t.name} *</Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="কর্মচারীর নাম"
+              placeholder={t.namePlaceholder}
               required
             />
           </div>
           
           <div>
-            <Label htmlFor="role">পদবি *</Label>
+            <Label htmlFor="role">{t.role} *</Label>
             <Select value={formData.role} onValueChange={(v: any) => setFormData({ ...formData, role: v })}>
               <SelectTrigger>
-                <SelectValue placeholder="পদবি নির্বাচন করুন" />
+                <SelectValue placeholder={t.rolePlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(roleLabels).map(([value, label]) => (
@@ -135,7 +159,7 @@ export const EmployeeForm = ({ open, onOpenChange, editData }: EmployeeFormProps
           </div>
           
           <div>
-            <Label htmlFor="phone">ফোন নম্বর *</Label>
+            <Label htmlFor="phone">{t.phone} *</Label>
             <Input
               id="phone"
               value={formData.phone}
@@ -146,7 +170,7 @@ export const EmployeeForm = ({ open, onOpenChange, editData }: EmployeeFormProps
           </div>
           
           <div>
-            <Label htmlFor="salary">বেতন (৳) *</Label>
+            <Label htmlFor="salary">{t.salary} *</Label>
             <Input
               id="salary"
               type="number"
@@ -158,27 +182,27 @@ export const EmployeeForm = ({ open, onOpenChange, editData }: EmployeeFormProps
           </div>
           
           <div>
-            <Label htmlFor="shift">শিফট</Label>
+            <Label htmlFor="shift">{t.shift}</Label>
             <Input
               id="shift"
               value={formData.shift}
               onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
-              placeholder="সকাল ৮টা - রাত ৮টা"
+              placeholder={t.shiftPlaceholder}
             />
           </div>
           
           <div>
-            <Label htmlFor="nid">জাতীয় পরিচয়পত্র (NID)</Label>
+            <Label htmlFor="nid">{t.nid}</Label>
             <Input
               id="nid"
               value={formData.nid}
               onChange={(e) => setFormData({ ...formData, nid: e.target.value })}
-              placeholder="NID নম্বর"
+              placeholder={t.nidPlaceholder}
             />
           </div>
           
           <div>
-            <Label htmlFor="join_date">যোগদানের তারিখ</Label>
+            <Label htmlFor="join_date">{t.joinDate}</Label>
             <Input
               id="join_date"
               type="date"
@@ -189,10 +213,10 @@ export const EmployeeForm = ({ open, onOpenChange, editData }: EmployeeFormProps
           
           <div className="flex gap-2 justify-end pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              বাতিল
+              {t.cancel}
             </Button>
             <Button type="submit" disabled={createEmployee.isPending || updateEmployee.isPending}>
-              {editData ? 'আপডেট করুন' : 'যুক্ত করুন'}
+              {t.submit}
             </Button>
           </div>
         </form>

@@ -41,7 +41,7 @@ export const useCreateCamera = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cameras'] });
-      toast({ title: 'ক্যামেরা যুক্ত হয়েছে' });
+      toast({ title: 'Camera added / ক্যামেরা যুক্ত হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -65,7 +65,7 @@ export const useUpdateCamera = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cameras'] });
-      toast({ title: 'ক্যামেরা আপডেট হয়েছে' });
+      toast({ title: 'Camera updated / ক্যামেরা আপডেট হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -83,7 +83,7 @@ export const useDeleteCamera = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cameras'] });
-      toast({ title: 'ক্যামেরা মুছে ফেলা হয়েছে' });
+      toast({ title: 'Camera deleted / ক্যামেরা মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

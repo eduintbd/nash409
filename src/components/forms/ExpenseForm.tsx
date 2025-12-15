@@ -18,22 +18,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateExpense, useExpenseCategories } from '@/hooks/useExpenses';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ExpenseFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const paymentMethods = [
-  { value: 'cash', label: 'নগদ' },
-  { value: 'bank', label: 'ব্যাংক' },
-  { value: 'bkash', label: 'বিকাশ' },
-  { value: 'nagad', label: 'নগদ (Nagad)' },
-  { value: 'rocket', label: 'রকেট' },
-  { value: 'cheque', label: 'চেক' },
-];
-
 export const ExpenseForm = ({ open, onOpenChange }: ExpenseFormProps) => {
+  const { language } = useLanguage();
   const { data: categories } = useExpenseCategories();
   const createExpense = useCreateExpense();
   
@@ -75,20 +68,45 @@ export const ExpenseForm = ({ open, onOpenChange }: ExpenseFormProps) => {
     onOpenChange(false);
   };
 
+  const paymentMethods = [
+    { value: 'cash', label: language === 'bn' ? 'নগদ' : 'Cash' },
+    { value: 'bank', label: language === 'bn' ? 'ব্যাংক' : 'Bank' },
+    { value: 'bkash', label: language === 'bn' ? 'বিকাশ' : 'bKash' },
+    { value: 'nagad', label: language === 'bn' ? 'নগদ (Nagad)' : 'Nagad' },
+    { value: 'rocket', label: language === 'bn' ? 'রকেট' : 'Rocket' },
+    { value: 'cheque', label: language === 'bn' ? 'চেক' : 'Cheque' },
+  ];
+
+  const t = {
+    title: language === 'bn' ? 'নতুন খরচ যুক্ত করুন' : 'Add New Expense',
+    description: language === 'bn' ? 'বিল্ডিং খরচের তথ্য দিন' : 'Enter building expense details',
+    category: language === 'bn' ? 'ক্যাটাগরি' : 'Category',
+    categoryPlaceholder: language === 'bn' ? 'ক্যাটাগরি নির্বাচন করুন' : 'Select category',
+    expenseDescription: language === 'bn' ? 'বিবরণ' : 'Description',
+    descriptionPlaceholder: language === 'bn' ? 'খরচের বিবরণ লিখুন' : 'Enter expense description',
+    amount: language === 'bn' ? 'পরিমাণ (৳)' : 'Amount (৳)',
+    date: language === 'bn' ? 'তারিখ' : 'Date',
+    vendor: language === 'bn' ? 'বিক্রেতা/প্রতিষ্ঠান' : 'Vendor/Organization',
+    vendorPlaceholder: language === 'bn' ? 'বিক্রেতার নাম' : 'Vendor name',
+    paymentMethod: language === 'bn' ? 'পেমেন্ট পদ্ধতি' : 'Payment Method',
+    cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
+    submit: language === 'bn' ? 'যুক্ত করুন' : 'Add',
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>নতুন খরচ যুক্ত করুন</DialogTitle>
-          <DialogDescription>বিল্ডিং খরচের তথ্য দিন</DialogDescription>
+          <DialogTitle>{t.title}</DialogTitle>
+          <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="category">ক্যাটাগরি *</Label>
+            <Label htmlFor="category">{t.category} *</Label>
             <Select value={formData.category_id} onValueChange={(v) => setFormData({ ...formData, category_id: v })}>
               <SelectTrigger>
-                <SelectValue placeholder="ক্যাটাগরি নির্বাচন করুন" />
+                <SelectValue placeholder={t.categoryPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {categories?.map(cat => (
@@ -99,18 +117,18 @@ export const ExpenseForm = ({ open, onOpenChange }: ExpenseFormProps) => {
           </div>
           
           <div>
-            <Label htmlFor="description">বিবরণ *</Label>
+            <Label htmlFor="description">{t.expenseDescription} *</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="খরচের বিবরণ লিখুন"
+              placeholder={t.descriptionPlaceholder}
               required
             />
           </div>
           
           <div>
-            <Label htmlFor="amount">পরিমাণ (৳) *</Label>
+            <Label htmlFor="amount">{t.amount} *</Label>
             <Input
               id="amount"
               type="number"
@@ -122,7 +140,7 @@ export const ExpenseForm = ({ open, onOpenChange }: ExpenseFormProps) => {
           </div>
           
           <div>
-            <Label htmlFor="date">তারিখ</Label>
+            <Label htmlFor="date">{t.date}</Label>
             <Input
               id="date"
               type="date"
@@ -132,17 +150,17 @@ export const ExpenseForm = ({ open, onOpenChange }: ExpenseFormProps) => {
           </div>
           
           <div>
-            <Label htmlFor="vendor">বিক্রেতা/প্রতিষ্ঠান</Label>
+            <Label htmlFor="vendor">{t.vendor}</Label>
             <Input
               id="vendor"
               value={formData.vendor}
               onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
-              placeholder="বিক্রেতার নাম"
+              placeholder={t.vendorPlaceholder}
             />
           </div>
           
           <div>
-            <Label htmlFor="payment_method">পেমেন্ট পদ্ধতি</Label>
+            <Label htmlFor="payment_method">{t.paymentMethod}</Label>
             <Select value={formData.payment_method} onValueChange={(v: any) => setFormData({ ...formData, payment_method: v })}>
               <SelectTrigger>
                 <SelectValue />
@@ -157,10 +175,10 @@ export const ExpenseForm = ({ open, onOpenChange }: ExpenseFormProps) => {
           
           <div className="flex gap-2 justify-end pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              বাতিল
+              {t.cancel}
             </Button>
             <Button type="submit" disabled={createExpense.isPending}>
-              যুক্ত করুন
+              {t.submit}
             </Button>
           </div>
         </form>

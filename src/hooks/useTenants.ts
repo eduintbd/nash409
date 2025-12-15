@@ -46,7 +46,7 @@ export const useCreateTenant = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       queryClient.invalidateQueries({ queryKey: ['flats'] });
-      toast({ title: 'ভাড়াটিয়া যুক্ত হয়েছে' });
+      toast({ title: 'Tenant added / ভাড়াটিয়া যুক্ত হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -70,7 +70,7 @@ export const useUpdateTenant = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast({ title: 'ভাড়াটিয়া আপডেট হয়েছে' });
+      toast({ title: 'Tenant updated / ভাড়াটিয়া আপডেট হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -89,7 +89,7 @@ export const useDeleteTenant = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       queryClient.invalidateQueries({ queryKey: ['flats'] });
-      toast({ title: 'ভাড়াটিয়া মুছে ফেলা হয়েছে' });
+      toast({ title: 'Tenant deleted / ভাড়াটিয়া মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

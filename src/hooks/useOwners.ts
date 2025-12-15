@@ -45,7 +45,7 @@ export const useCreateOwner = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owners'] });
       queryClient.invalidateQueries({ queryKey: ['flats'] });
-      toast({ title: 'মালিক যুক্ত হয়েছে' });
+      toast({ title: 'Owner added / মালিক যুক্ত হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -69,7 +69,7 @@ export const useUpdateOwner = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owners'] });
-      toast({ title: 'মালিক আপডেট হয়েছে' });
+      toast({ title: 'Owner updated / মালিক আপডেট হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -88,7 +88,7 @@ export const useDeleteOwner = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owners'] });
       queryClient.invalidateQueries({ queryKey: ['flats'] });
-      toast({ title: 'মালিক মুছে ফেলা হয়েছে' });
+      toast({ title: 'Owner deleted / মালিক মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

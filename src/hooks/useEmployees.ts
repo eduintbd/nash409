@@ -44,7 +44,7 @@ export const useCreateEmployee = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast({ title: 'কর্মচারী যুক্ত হয়েছে' });
+      toast({ title: 'Employee added / কর্মচারী যুক্ত হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -68,7 +68,7 @@ export const useUpdateEmployee = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast({ title: 'কর্মচারী আপডেট হয়েছে' });
+      toast({ title: 'Employee updated / কর্মচারী আপডেট হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -86,7 +86,7 @@ export const useDeleteEmployee = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast({ title: 'কর্মচারী মুছে ফেলা হয়েছে' });
+      toast({ title: 'Employee deleted / কর্মচারী মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
