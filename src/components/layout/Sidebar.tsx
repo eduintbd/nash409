@@ -13,20 +13,23 @@ import {
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Flats', href: '/flats', icon: Building2 },
-  { name: 'Owners & Tenants', href: '/residents', icon: Users },
-  { name: 'Employees', href: '/employees', icon: UserCog },
-  { name: 'Invoices', href: '/invoices', icon: Receipt },
-  { name: 'Expenses', href: '/expenses', icon: Wallet },
-  { name: 'Service Requests', href: '/requests', icon: Wrench },
-  { name: 'Cameras', href: '/cameras', icon: Camera },
-  { name: 'AI Assistant', href: '/assistant', icon: Bot },
-];
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export function Sidebar() {
+  const { t } = useLanguage();
+
+  const navigation = [
+    { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
+    { name: t.nav.flats, href: '/flats', icon: Building2 },
+    { name: t.nav.residents, href: '/residents', icon: Users },
+    { name: t.nav.employees, href: '/employees', icon: UserCog },
+    { name: t.nav.invoices, href: '/invoices', icon: Receipt },
+    { name: t.nav.expenses, href: '/expenses', icon: Wallet },
+    { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
+    { name: t.nav.cameras, href: '/cameras', icon: Camera },
+    { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
+  ];
+
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
       <div className="flex h-full flex-col">
@@ -45,7 +48,7 @@ export function Sidebar() {
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
           {navigation.map((item) => (
             <NavLink
-              key={item.name}
+              key={item.href}
               to={item.href}
               className={({ isActive }) =>
                 cn(
@@ -69,12 +72,8 @@ export function Sidebar() {
             }
           >
             <Settings className="h-5 w-5 flex-shrink-0" />
-            <span className="text-sm font-medium">Settings</span>
+            <span className="text-sm font-medium">{t.nav.settings}</span>
           </NavLink>
-          <button className="nav-item w-full text-left">
-            <LogOut className="h-5 w-5 flex-shrink-0" />
-            <span className="text-sm font-medium">Logout</span>
-          </button>
         </div>
 
         {/* User info */}

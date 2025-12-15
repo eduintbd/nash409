@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import Dashboard from "./pages/Dashboard";
 import Flats from "./pages/Flats";
 import Residents from "./pages/Residents";
@@ -19,25 +20,27 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/flats" element={<Flats />} />
-          <Route path="/residents" element={<Residents />} />
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/invoices" element={<Invoices />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/requests" element={<ServiceRequests />} />
-          <Route path="/cameras" element={<Cameras />} />
-          <Route path="/assistant" element={<AIAssistant />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <LanguageProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/flats" element={<Flats />} />
+            <Route path="/residents" element={<Residents />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/requests" element={<ServiceRequests />} />
+            <Route path="/cameras" element={<Cameras />} />
+            <Route path="/assistant" element={<AIAssistant />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </LanguageProvider>
   </QueryClientProvider>
 );
 
