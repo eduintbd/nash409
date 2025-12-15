@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useFlats, useUpdateFlat, useCreateFlat, useDeleteFlat, Flat } from '@/hooks/useFlats';
-import { useOwners } from '@/hooks/useOwners';
-import { useTenants } from '@/hooks/useTenants';
+import { useOwners, useUpdateOwner, Owner } from '@/hooks/useOwners';
+import { useTenants, useUpdateTenant, Tenant } from '@/hooks/useTenants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,8 @@ const Flats = () => {
   const updateFlat = useUpdateFlat();
   const createFlat = useCreateFlat();
   const deleteFlat = useDeleteFlat();
+  const updateOwner = useUpdateOwner();
+  const updateTenant = useUpdateTenant();
   
   const [search, setSearch] = useState('');
   const [selectedFlat, setSelectedFlat] = useState<Flat | null>(null);
@@ -71,27 +73,54 @@ const Flats = () => {
     flat.flat_number.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
-  const getOwner = (flatId: string) => owners?.find(o => o.flat_id === flatId);
-  const getTenant = (flatId: string) => tenants?.find(t => t.flat_id === flatId);
+  const getOwner = (flatId: string) => owners?.find(o => o.flat_id === flatId) as Owner | undefined;
+  const getTenant = (flatId: string) => tenants?.find(t => t.flat_id === flatId) as Tenant | undefined;
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString(language === 'bn' ? 'bn-BD' : 'en-US');
   };
 
-  const handleFormSubmit = (data: Partial<Flat>) => {
-    if (editFlat) {
-      updateFlat.mutate({ id: editFlat.id, ...data }, {
-        onSuccess: () => {
-          setShowForm(false);
-          setEditFlat(null);
+  const handleFormSubmit = async (data: {
+    flat: Partial<Flat>;
+    owner?: Partial<Owner> & { id?: string };
+    tenant?: Partial<Tenant> & { id?: string };
+  }) => {
+    try {
+      if (editFlat) {
+        // Update flat
+        await updateFlat.mutateAsync({ id: editFlat.id, ...data.flat });
+        
+        // Update owner if provided
+        if (data.owner?.id) {
+          await updateOwner.mutateAsync({ 
+            id: data.owner.id, 
+            name: data.owner.name,
+            phone: data.owner.phone,
+            email: data.owner.email,
+            nid: data.owner.nid,
+            emergency_contact: data.owner.emergency_contact,
+          });
         }
-      });
-    } else {
-      createFlat.mutate(data as Omit<Flat, 'id' | 'created_at' | 'updated_at'>, {
-        onSuccess: () => {
-          setShowForm(false);
+        
+        // Update tenant if provided
+        if (data.tenant?.id) {
+          await updateTenant.mutateAsync({ 
+            id: data.tenant.id, 
+            name: data.tenant.name,
+            phone: data.tenant.phone,
+            email: data.tenant.email,
+            nid: data.tenant.nid,
+            rent_amount: data.tenant.rent_amount,
+          });
         }
-      });
+      } else {
+        await createFlat.mutateAsync(data.flat as Omit<Flat, 'id' | 'created_at' | 'updated_at'>);
+      }
+      
+      setShowForm(false);
+      setEditFlat(null);
+    } catch (error) {
+      // Error handling is done in the hooks
     }
   };
 
@@ -111,6 +140,9 @@ const Flats = () => {
       });
     }
   };
+
+  const editOwner = editFlat ? getOwner(editFlat.id) : undefined;
+  const editTenant = editFlat ? getTenant(editFlat.id) : undefined;
 
   return (
     <MainLayout>
@@ -177,9 +209,9 @@ const Flats = () => {
                           {statusLabels[flat.status]}
                         </Badge>
                       </TableCell>
-                      <TableCell>{(displayPerson as any)?.name || '-'}</TableCell>
+                      <TableCell>{displayPerson?.name || '-'}</TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {(displayPerson as any)?.phone || '-'}
+                        {displayPerson?.phone || '-'}
                       </TableCell>
                       <TableCell>
                         {flat.parking_spot ? (
@@ -245,17 +277,17 @@ const Flats = () => {
                     <User className="h-4 w-4" /> {t.flats.ownerDetails}
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <p className="font-medium">{(getOwner(selectedFlat.id) as any)?.name}</p>
-                    {(getOwner(selectedFlat.id) as any)?.email && (
+                    <p className="font-medium">{getOwner(selectedFlat.id)?.name}</p>
+                    {getOwner(selectedFlat.id)?.email && (
                       <p className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="h-3 w-3" /> {(getOwner(selectedFlat.id) as any)?.email}
+                        <Mail className="h-3 w-3" /> {getOwner(selectedFlat.id)?.email}
                       </p>
                     )}
                     <p className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-3 w-3" /> {(getOwner(selectedFlat.id) as any)?.phone}
+                      <Phone className="h-3 w-3" /> {getOwner(selectedFlat.id)?.phone}
                     </p>
                     <p className="text-muted-foreground">
-                      {t.flats.ownerSince}: {formatDate((getOwner(selectedFlat.id) as any)?.ownership_start)}
+                      {t.flats.ownerSince}: {formatDate(getOwner(selectedFlat.id)?.ownership_start || '')}
                     </p>
                   </div>
                 </div>
@@ -267,17 +299,17 @@ const Flats = () => {
                     <User className="h-4 w-4" /> {t.flats.tenantDetails}
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <p className="font-medium">{(getTenant(selectedFlat.id) as any)?.name}</p>
-                    {(getTenant(selectedFlat.id) as any)?.email && (
+                    <p className="font-medium">{getTenant(selectedFlat.id)?.name}</p>
+                    {getTenant(selectedFlat.id)?.email && (
                       <p className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="h-3 w-3" /> {(getTenant(selectedFlat.id) as any)?.email}
+                        <Mail className="h-3 w-3" /> {getTenant(selectedFlat.id)?.email}
                       </p>
                     )}
                     <p className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-3 w-3" /> {(getTenant(selectedFlat.id) as any)?.phone}
+                      <Phone className="h-3 w-3" /> {getTenant(selectedFlat.id)?.phone}
                     </p>
                     <p className="text-muted-foreground">
-                      {t.flats.rent}: {formatBDT((getTenant(selectedFlat.id) as any)?.rent_amount || 0)}{t.common.perMonth}
+                      {t.flats.rent}: {formatBDT(getTenant(selectedFlat.id)?.rent_amount || 0)}{t.common.perMonth}
                     </p>
                   </div>
                 </div>
@@ -293,7 +325,9 @@ const Flats = () => {
         onClose={() => { setShowForm(false); setEditFlat(null); }}
         onSubmit={handleFormSubmit}
         editData={editFlat}
-        isLoading={createFlat.isPending || updateFlat.isPending}
+        ownerData={editOwner || null}
+        tenantData={editTenant || null}
+        isLoading={createFlat.isPending || updateFlat.isPending || updateOwner.isPending || updateTenant.isPending}
       />
 
       {/* Delete Confirmation */}
