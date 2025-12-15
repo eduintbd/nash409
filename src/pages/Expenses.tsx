@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
-import { mockExpenses, expenseCategories } from '@/data/mockData';
+import { useExpenses, useExpenseCategories, useDeleteExpense } from '@/hooks/useExpenses';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,40 +20,67 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Plus, Download, TrendingDown } from 'lucide-react';
+import { ExpenseForm } from '@/components/forms/ExpenseForm';
+import { Search, Plus, TrendingDown, Trash2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatBDT } from '@/lib/currency';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-const categoryColors: Record<string, string> = {
-  'Electricity': 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  'Water': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Security': 'bg-purple-100 text-purple-700 border-purple-200',
-  'Cleaning': 'bg-green-100 text-green-700 border-green-200',
-  'Elevator': 'bg-orange-100 text-orange-700 border-orange-200',
-  'Repairs': 'bg-red-100 text-red-700 border-red-200',
+const paymentMethodLabels: Record<string, string> = {
+  cash: 'নগদ',
+  bank: 'ব্যাংক',
+  bkash: 'বিকাশ',
+  nagad: 'নগদ (Nagad)',
+  rocket: 'রকেট',
+  cheque: 'চেক',
 };
 
 const Expenses = () => {
+  const { data: expenses, isLoading } = useExpenses();
+  const { data: categories } = useExpenseCategories();
+  const deleteExpense = useDeleteExpense();
+  
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const filteredExpenses = mockExpenses.filter(expense => {
+  const filteredExpenses = expenses?.filter(expense => {
     const matchesSearch = expense.description.toLowerCase().includes(search.toLowerCase()) ||
                           expense.vendor?.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || expense.category === categoryFilter;
+    const matchesCategory = categoryFilter === 'all' || expense.category_id === categoryFilter;
     return matchesSearch && matchesCategory;
-  });
+  }) || [];
 
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
-  const expensesByCategory = mockExpenses.reduce((acc, exp) => {
-    acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+  const expensesByCategory = expenses?.reduce((acc, exp: any) => {
+    const catName = exp.expense_categories?.name || 'অন্যান্য';
+    acc[catName] = (acc[catName] || 0) + Number(exp.amount);
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, number>) || {};
+
+  const handleDelete = async () => {
+    if (deleteId) {
+      await deleteExpense.mutateAsync(deleteId);
+      setDeleteId(null);
+    }
+  };
 
   return (
     <MainLayout>
       <Header 
-        title="Expenses" 
-        subtitle="Track and manage building expenses"
+        title="খরচ" 
+        subtitle="বিল্ডিং খরচ ট্র্যাক ও ব্যবস্থাপনা"
       />
       
       <div className="p-6 space-y-6 animate-fade-in">
@@ -62,14 +89,14 @@ const Expenses = () => {
           <div className="stat-card col-span-2 md:col-span-1">
             <div className="flex items-center gap-2">
               <TrendingDown className="h-5 w-5 text-destructive" />
-              <p className="text-sm text-muted-foreground">Total Expenses</p>
+              <p className="text-sm text-muted-foreground">মোট খরচ</p>
             </div>
-            <p className="text-2xl font-bold mt-2">₹{totalExpenses.toLocaleString()}</p>
+            <p className="text-2xl font-bold mt-2">{formatBDT(totalExpenses)}</p>
           </div>
           {Object.entries(expensesByCategory).slice(0, 3).map(([category, amount]) => (
             <div key={category} className="stat-card">
-              <p className="text-sm text-muted-foreground">{category}</p>
-              <p className="text-xl font-bold mt-1">₹{amount.toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground truncate">{category}</p>
+              <p className="text-xl font-bold mt-1">{formatBDT(amount)}</p>
             </div>
           ))}
         </div>
@@ -80,74 +107,99 @@ const Expenses = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search expenses..."
+                placeholder="খরচ খুঁজুন..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Category" />
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="ক্যাটাগরি" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {expenseCategories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                <SelectItem value="all">সকল ক্যাটাগরি</SelectItem>
+                {categories?.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Expense
-            </Button>
-          </div>
+          <Button onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            খরচ যুক্ত করুন
+          </Button>
         </div>
 
         {/* Expenses Table */}
         <div className="stat-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="table-header">
-                <TableHead>Date</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredExpenses.map((expense) => (
-                <TableRow key={expense.id} className="table-row-hover">
-                  <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={categoryColors[expense.category] || 'bg-muted'}>
-                      {expense.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">{expense.description}</TableCell>
-                  <TableCell className="text-muted-foreground">{expense.vendor || '-'}</TableCell>
-                  <TableCell>
-                    <span className="text-xs uppercase font-medium text-muted-foreground">
-                      {expense.paymentMethod}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold text-destructive">
-                    ₹{expense.amount.toLocaleString()}
-                  </TableCell>
+          {isLoading ? (
+            <div className="p-4 space-y-4">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}
+            </div>
+          ) : filteredExpenses.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>কোনো খরচ নেই</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="table-header">
+                  <TableHead>তারিখ</TableHead>
+                  <TableHead>ক্যাটাগরি</TableHead>
+                  <TableHead>বিবরণ</TableHead>
+                  <TableHead>বিক্রেতা</TableHead>
+                  <TableHead>পেমেন্ট</TableHead>
+                  <TableHead className="text-right">পরিমাণ</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredExpenses.map((expense: any) => (
+                  <TableRow key={expense.id} className="table-row-hover">
+                    <TableCell>{new Date(expense.date).toLocaleDateString('bn-BD')}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-muted">
+                        {expense.expense_categories?.name || 'অন্যান্য'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">{expense.description}</TableCell>
+                    <TableCell className="text-muted-foreground">{expense.vendor || '-'}</TableCell>
+                    <TableCell>
+                      <span className="text-xs uppercase font-medium text-muted-foreground">
+                        {paymentMethodLabels[expense.payment_method] || expense.payment_method}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-destructive">
+                      {formatBDT(expense.amount)}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(expense.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
+
+      <ExpenseForm open={formOpen} onOpenChange={setFormOpen} />
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+            <AlertDialogDescription>এই খরচের তথ্য মুছে ফেলা হবে।</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>বাতিল</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive">মুছে ফেলুন</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
