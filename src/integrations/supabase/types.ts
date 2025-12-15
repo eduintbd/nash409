@@ -14,7 +14,428 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cameras: {
+        Row: {
+          camera_id: string | null
+          created_at: string
+          id: string
+          location: string
+          name: string
+          status: Database["public"]["Enums"]["camera_status"]
+          updated_at: string
+        }
+        Insert: {
+          camera_id?: string | null
+          created_at?: string
+          id?: string
+          location: string
+          name: string
+          status?: Database["public"]["Enums"]["camera_status"]
+          updated_at?: string
+        }
+        Update: {
+          camera_id?: string | null
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          status?: Database["public"]["Enums"]["camera_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employees: {
+        Row: {
+          created_at: string
+          id: string
+          join_date: string
+          name: string
+          nid: string | null
+          phone: string
+          role: Database["public"]["Enums"]["employee_role"]
+          salary: number
+          shift: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          join_date?: string
+          name: string
+          nid?: string | null
+          phone: string
+          role: Database["public"]["Enums"]["employee_role"]
+          salary: number
+          shift?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          join_date?: string
+          name?: string
+          nid?: string | null
+          phone?: string
+          role?: Database["public"]["Enums"]["employee_role"]
+          salary?: number
+          shift?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          attachment_url: string | null
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string
+          id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          amount: number
+          attachment_url?: string | null
+          category_id?: string | null
+          created_at?: string
+          date?: string
+          description: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number
+          attachment_url?: string | null
+          category_id?: string | null
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flats: {
+        Row: {
+          created_at: string
+          flat_number: string
+          floor: number
+          id: string
+          parking_spot: string | null
+          size: number
+          status: Database["public"]["Enums"]["flat_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          flat_number: string
+          floor: number
+          id?: string
+          parking_spot?: string | null
+          size?: number
+          status?: Database["public"]["Enums"]["flat_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          flat_number?: string
+          floor?: number
+          id?: string
+          parking_spot?: string | null
+          size?: number
+          status?: Database["public"]["Enums"]["flat_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          due_date: string
+          flat_id: string
+          id: string
+          month: string
+          paid_date: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          due_date: string
+          flat_id: string
+          id?: string
+          month: string
+          paid_date?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          flat_id?: string
+          id?: string
+          month?: string
+          paid_date?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owners: {
+        Row: {
+          created_at: string
+          email: string | null
+          emergency_contact: string | null
+          flat_id: string | null
+          id: string
+          name: string
+          nid: string | null
+          ownership_start: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          emergency_contact?: string | null
+          flat_id?: string | null
+          id?: string
+          name: string
+          nid?: string | null
+          ownership_start?: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          emergency_contact?: string | null
+          flat_id?: string | null
+          id?: string
+          name?: string
+          nid?: string | null
+          ownership_start?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owners_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          flat_id: string
+          id: string
+          invoice_id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          flat_id: string
+          id?: string
+          invoice_id: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          flat_id?: string
+          id?: string
+          invoice_id?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_requests: {
+        Row: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["request_category"]
+          cost: number | null
+          created_at: string
+          description: string | null
+          flat_id: string
+          id: string
+          priority: Database["public"]["Enums"]["request_priority"]
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["request_category"]
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          flat_id: string
+          id?: string
+          priority?: Database["public"]["Enums"]["request_priority"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["request_category"]
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          flat_id?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["request_priority"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          email: string | null
+          end_date: string | null
+          flat_id: string | null
+          id: string
+          name: string
+          nid: string | null
+          phone: string
+          rent_amount: number
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          end_date?: string | null
+          flat_id?: string | null
+          id?: string
+          name: string
+          nid?: string | null
+          phone: string
+          rent_amount: number
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          end_date?: string | null
+          flat_id?: string | null
+          id?: string
+          name?: string
+          nid?: string | null
+          phone?: string
+          rent_amount?: number
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenants_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +444,19 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      camera_status: "online" | "offline"
+      employee_role: "guard" | "cleaner" | "caretaker" | "other"
+      flat_status: "owner-occupied" | "tenant" | "vacant"
+      invoice_status: "paid" | "unpaid" | "overdue"
+      payment_method: "cash" | "bank" | "bkash" | "nagad" | "rocket" | "cheque"
+      request_category:
+        | "plumbing"
+        | "electrical"
+        | "elevator"
+        | "common-area"
+        | "other"
+      request_priority: "low" | "medium" | "high" | "urgent"
+      request_status: "open" | "in-progress" | "resolved" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +583,21 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      camera_status: ["online", "offline"],
+      employee_role: ["guard", "cleaner", "caretaker", "other"],
+      flat_status: ["owner-occupied", "tenant", "vacant"],
+      invoice_status: ["paid", "unpaid", "overdue"],
+      payment_method: ["cash", "bank", "bkash", "nagad", "rocket", "cheque"],
+      request_category: [
+        "plumbing",
+        "electrical",
+        "elevator",
+        "common-area",
+        "other",
+      ],
+      request_priority: ["low", "medium", "high", "urgent"],
+      request_status: ["open", "in-progress", "resolved", "closed"],
+    },
   },
 } as const
