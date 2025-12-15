@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Camera, Wifi, WifiOff, ExternalLink, Plus, Trash2 } from 'lucide-react';
+import { Camera, Wifi, WifiOff, ExternalLink, Plus, Trash2, Copy, Monitor, Smartphone } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -66,6 +67,18 @@ const Cameras = () => {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: language === 'bn' ? 'কপি হয়েছে' : 'Copied',
+      description: text,
+    });
+  };
+
+  const openCameraWeb = (ip: string) => {
+    window.open(`http://${ip}`, '_blank');
+  };
+
   return (
     <MainLayout>
       <Header 
@@ -96,12 +109,14 @@ const Cameras = () => {
         <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
           <div className="flex items-start gap-3">
             <Camera className="h-5 w-5 text-primary mt-0.5" />
-            <div>
+            <div className="flex-1">
               <h3 className="font-medium text-foreground">{t.cameras.cameraIntegration}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {t.cameras.cameraIntegrationHint}
+                {language === 'bn' 
+                  ? 'আপনার V380 Pro ক্যামেরা দেখতে নীচের বিকল্পগুলি ব্যবহার করুন। ওয়েব ব্রাউজার সরাসরি RTSP স্ট্রিম দেখাতে পারে না।'
+                  : 'Use the options below to view your V380 Pro camera. Web browsers cannot directly display RTSP streams.'}
               </p>
-              <div className="flex gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-3">
                 <Button size="sm" onClick={() => setFormOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   {t.common.add} {t.cameras.title}
@@ -122,24 +137,39 @@ const Cameras = () => {
             <p>{t.cameras.noCameras}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {cameras?.map((camera) => (
               <Card key={camera.id} className="stat-card border-0 overflow-hidden">
-                {/* Camera Preview Placeholder */}
-                <div className="aspect-video bg-muted/50 relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    {camera.status === 'online' ? (
-                      <div className="text-center">
-                        <Camera className="h-12 w-12 text-muted-foreground/50 mx-auto" />
-                        <p className="text-xs text-muted-foreground mt-2">{t.cameras.liveFeed}</p>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <WifiOff className="h-12 w-12 text-destructive/50 mx-auto" />
-                        <p className="text-xs text-destructive mt-2">{t.cameras.offline}</p>
-                      </div>
-                    )}
-                  </div>
+                {/* Camera Preview - Try iframe embed */}
+                <div className="aspect-video bg-muted/30 relative">
+                  {camera.status === 'online' && camera.camera_id ? (
+                    <iframe
+                      src={`http://${camera.camera_id}`}
+                      className="w-full h-full border-0"
+                      title={camera.name}
+                      sandbox="allow-same-origin allow-scripts"
+                      onError={(e) => {
+                        console.log('Iframe load error:', e);
+                      }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {camera.status === 'online' ? (
+                        <div className="text-center p-4">
+                          <Camera className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+                          <p className="text-sm text-muted-foreground mt-2">
+                            {language === 'bn' ? 'IP ঠিকানা যুক্ত করুন' : 'Add IP address to view'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <WifiOff className="h-12 w-12 text-destructive/50 mx-auto" />
+                          <p className="text-xs text-destructive mt-2">{t.cameras.offline}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <Badge 
                     className={`absolute top-2 right-2 ${
                       camera.status === 'online' 
@@ -156,30 +186,16 @@ const Cameras = () => {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="absolute top-2 left-2 h-8 w-8 bg-background/50 hover:bg-destructive hover:text-destructive-foreground"
+                    className="absolute top-2 left-2 h-8 w-8 bg-background/80 hover:bg-destructive hover:text-destructive-foreground"
                     onClick={() => setDeleteId(camera.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
+                
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{camera.name}</CardTitle>
-                  <CardDescription>{camera.location}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {camera.camera_id && (
-                    <p className="text-xs text-muted-foreground">ID: {camera.camera_id}</p>
-                  )}
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1" 
-                      disabled={camera.status === 'offline'}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      {t.cameras.liveFeed}
-                    </Button>
+                  <CardTitle className="text-base flex items-center justify-between">
+                    {camera.name}
                     <Button 
                       variant="outline" 
                       size="sm"
@@ -187,7 +203,66 @@ const Cameras = () => {
                     >
                       {camera.status === 'online' ? t.cameras.turnOff : t.cameras.turnOn}
                     </Button>
+                  </CardTitle>
+                  <CardDescription>{camera.location}</CardDescription>
+                </CardHeader>
+                
+                <CardContent className="space-y-3">
+                  {camera.camera_id && (
+                    <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">IP: {camera.camera_id}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7"
+                          onClick={() => copyToClipboard(camera.camera_id!)}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">RTSP: rtsp://{camera.camera_id}:554/live/ch00_0</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7"
+                          onClick={() => copyToClipboard(`rtsp://${camera.camera_id}:554/live/ch00_0`)}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      disabled={!camera.camera_id || camera.status === 'offline'}
+                      onClick={() => camera.camera_id && openCameraWeb(camera.camera_id)}
+                    >
+                      <Monitor className="h-4 w-4 mr-2" />
+                      {language === 'bn' ? 'ওয়েব ভিউ' : 'Web View'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      disabled={!camera.camera_id}
+                      onClick={() => camera.camera_id && copyToClipboard(camera.camera_id)}
+                    >
+                      <Smartphone className="h-4 w-4 mr-2" />
+                      {language === 'bn' ? 'অ্যাপে দেখুন' : 'V380 App'}
+                    </Button>
                   </div>
+                  
+                  <p className="text-xs text-muted-foreground text-center">
+                    {language === 'bn' 
+                      ? 'VLC তে RTSP URL পেস্ট করুন অথবা V380 Pro অ্যাপ ব্যবহার করুন'
+                      : 'Paste RTSP URL in VLC or use V380 Pro app'}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -219,12 +294,17 @@ const Cameras = () => {
               />
             </div>
             <div>
-              <Label>Camera ID ({language === 'bn' ? 'ঐচ্ছিক' : 'Optional'})</Label>
+              <Label>{language === 'bn' ? 'ক্যামেরা IP ঠিকানা' : 'Camera IP Address'}</Label>
               <Input 
                 value={newCamera.camera_id} 
                 onChange={(e) => setNewCamera({ ...newCamera, camera_id: e.target.value })}
-                placeholder="V380-XXXX"
+                placeholder="192.168.1.100"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                {language === 'bn' 
+                  ? 'আপনার V380 Pro ক্যামেরার IP ঠিকানা লিখুন'
+                  : 'Enter your V380 Pro camera IP address'}
+              </p>
             </div>
           </div>
           <DialogFooter>
