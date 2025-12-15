@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { useOwners, useDeleteOwner } from '@/hooks/useOwners';
 import { useTenants, useDeleteTenant } from '@/hooks/useTenants';
 import { useFlats } from '@/hooks/useFlats';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const Residents = () => {
+  const { t, language } = useLanguage();
   const { data: owners, isLoading: loadingOwners } = useOwners();
   const { data: tenants, isLoading: loadingTenants } = useTenants();
   const { data: flats } = useFlats();
@@ -66,11 +68,13 @@ const Residents = () => {
     }
   };
 
+  const locale = language === 'bn' ? 'bn-BD' : 'en-US';
+
   return (
     <MainLayout>
       <Header 
-        title="মালিক ও ভাড়াটিয়া" 
-        subtitle="বিল্ডিংয়ের বাসিন্দাদের ব্যবস্থাপনা"
+        title={t.residents.title} 
+        subtitle={t.residents.subtitle}
       />
       
       <div className="p-6 space-y-6 animate-fade-in">
@@ -79,7 +83,7 @@ const Residents = () => {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="বাসিন্দা খুঁজুন..."
+              placeholder={t.residents.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -90,8 +94,8 @@ const Residents = () => {
         <Tabs defaultValue="owners" className="space-y-6">
           <div className="flex items-center justify-between">
             <TabsList className="bg-muted/50">
-              <TabsTrigger value="owners">মালিক ({owners?.length || 0})</TabsTrigger>
-              <TabsTrigger value="tenants">ভাড়াটিয়া ({tenants?.length || 0})</TabsTrigger>
+              <TabsTrigger value="owners">{t.residents.owners} ({owners?.length || 0})</TabsTrigger>
+              <TabsTrigger value="tenants">{t.residents.tenants} ({tenants?.length || 0})</TabsTrigger>
             </TabsList>
           </div>
 
@@ -99,7 +103,7 @@ const Residents = () => {
             <div className="flex justify-end">
               <Button onClick={() => { setEditOwner(null); setOwnerFormOpen(true); }}>
                 <Plus className="h-4 w-4 mr-2" />
-                মালিক যুক্ত করুন
+                {t.residents.addOwner}
               </Button>
             </div>
             
@@ -109,7 +113,7 @@ const Residents = () => {
               </div>
             ) : filteredOwners.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <p>কোনো মালিক নেই</p>
+                <p>{t.common.noData}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -123,12 +127,12 @@ const Residents = () => {
                             <CardTitle className="text-base">{owner.name}</CardTitle>
                             <CardDescription className="flex items-center gap-1 mt-1">
                               <Building2 className="h-3 w-3" />
-                              {flat?.flat_number || 'ফ্ল্যাট নির্ধারিত নয়'}
+                              {flat?.flat_number || t.residents.flatNotAssigned}
                             </CardDescription>
                           </div>
                           <div className="flex items-center gap-1">
                             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                              মালিক
+                              {t.flats.statusOwner}
                             </Badge>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditOwner(owner); setOwnerFormOpen(true); }}>
                               <Edit className="h-4 w-4" />
@@ -149,7 +153,7 @@ const Residents = () => {
                           <Phone className="h-3.5 w-3.5" /> {owner.phone}
                         </p>
                         <p className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5" /> মালিকানা: {new Date(owner.ownership_start).toLocaleDateString('bn-BD')}
+                          <Calendar className="h-3.5 w-3.5" /> {t.residents.ownershipSince}: {new Date(owner.ownership_start).toLocaleDateString(locale)}
                         </p>
                       </CardContent>
                     </Card>
@@ -163,7 +167,7 @@ const Residents = () => {
             <div className="flex justify-end">
               <Button onClick={() => { setEditTenant(null); setTenantFormOpen(true); }}>
                 <Plus className="h-4 w-4 mr-2" />
-                ভাড়াটিয়া যুক্ত করুন
+                {t.residents.addTenant}
               </Button>
             </div>
             
@@ -173,7 +177,7 @@ const Residents = () => {
               </div>
             ) : filteredTenants.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <p>কোনো ভাড়াটিয়া নেই</p>
+                <p>{t.common.noData}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -187,12 +191,12 @@ const Residents = () => {
                             <CardTitle className="text-base">{tenant.name}</CardTitle>
                             <CardDescription className="flex items-center gap-1 mt-1">
                               <Building2 className="h-3 w-3" />
-                              {flat?.flat_number || 'ফ্ল্যাট নির্ধারিত নয়'}
+                              {flat?.flat_number || t.residents.flatNotAssigned}
                             </CardDescription>
                           </div>
                           <div className="flex items-center gap-1">
                             <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                              ভাড়াটিয়া
+                              {t.flats.statusTenant}
                             </Badge>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditTenant(tenant); setTenantFormOpen(true); }}>
                               <Edit className="h-4 w-4" />
@@ -214,10 +218,10 @@ const Residents = () => {
                         </p>
                         <div className="pt-2 border-t">
                           <p className="font-medium text-foreground">
-                            {formatBDT(tenant.rent_amount)}/মাস
+                            {formatBDT(tenant.rent_amount)}{t.common.perMonth}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            ভাড়া শুরু: {new Date(tenant.start_date).toLocaleDateString('bn-BD')}
+                            {t.residents.rentStarted}: {new Date(tenant.start_date).toLocaleDateString(locale)}
                           </p>
                         </div>
                       </CardContent>
@@ -236,12 +240,12 @@ const Residents = () => {
       <AlertDialog open={!!deleteOwnerModal} onOpenChange={() => setDeleteOwnerModal(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-            <AlertDialogDescription>এই মালিকের তথ্য মুছে ফেলা হবে।</AlertDialogDescription>
+            <AlertDialogTitle>{t.common.confirmDelete}</AlertDialogTitle>
+            <AlertDialogDescription>{t.common.deleteWarning}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>বাতিল</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteOwner} className="bg-destructive">মুছে ফেলুন</AlertDialogAction>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteOwner} className="bg-destructive">{t.common.delete}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -249,12 +253,12 @@ const Residents = () => {
       <AlertDialog open={!!deleteTenantModal} onOpenChange={() => setDeleteTenantModal(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-            <AlertDialogDescription>এই ভাড়াটিয়ার তথ্য মুছে ফেলা হবে।</AlertDialogDescription>
+            <AlertDialogTitle>{t.common.confirmDelete}</AlertDialogTitle>
+            <AlertDialogDescription>{t.common.deleteWarning}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>বাতিল</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTenant} className="bg-destructive">মুছে ফেলুন</AlertDialogAction>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTenant} className="bg-destructive">{t.common.delete}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
