@@ -27,6 +27,29 @@ export const useFlats = () => {
   });
 };
 
+export const useCreateFlat = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (flat: Omit<Flat, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await supabase
+        .from('flats')
+        .insert(flat)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['flats'] });
+      toast({ title: 'ফ্ল্যাট যোগ হয়েছে' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
 export const useUpdateFlat = () => {
   const queryClient = useQueryClient();
   
@@ -44,6 +67,27 @@ export const useUpdateFlat = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flats'] });
       toast({ title: 'ফ্ল্যাট আপডেট হয়েছে' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useDeleteFlat = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('flats')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['flats'] });
+      toast({ title: 'ফ্ল্যাট মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

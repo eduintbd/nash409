@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
-import { useFlats } from '@/hooks/useFlats';
+import { useFlats, useUpdateFlat, useCreateFlat, useDeleteFlat, Flat } from '@/hooks/useFlats';
 import { useOwners } from '@/hooks/useOwners';
 import { useTenants } from '@/hooks/useTenants';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,17 +24,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Search, Building2, User, Phone, Mail, Car } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Search, Building2, User, Phone, Mail, Car, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
+import FlatForm from '@/components/forms/FlatForm';
 
 const Flats = () => {
   const { t, language } = useLanguage();
+  const { isAdmin } = useAuth();
   const { data: flats, isLoading } = useFlats();
   const { data: owners } = useOwners();
   const { data: tenants } = useTenants();
+  const updateFlat = useUpdateFlat();
+  const createFlat = useCreateFlat();
+  const deleteFlat = useDeleteFlat();
+  
   const [search, setSearch] = useState('');
-  const [selectedFlat, setSelectedFlat] = useState<any | null>(null);
+  const [selectedFlat, setSelectedFlat] = useState<Flat | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editFlat, setEditFlat] = useState<Flat | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Flat | null>(null);
 
   const statusColors = {
     'owner-occupied': 'bg-primary/10 text-primary border-primary/20',
@@ -58,6 +78,40 @@ const Flats = () => {
     return new Date(date).toLocaleDateString(language === 'bn' ? 'bn-BD' : 'en-US');
   };
 
+  const handleFormSubmit = (data: Partial<Flat>) => {
+    if (editFlat) {
+      updateFlat.mutate({ id: editFlat.id, ...data }, {
+        onSuccess: () => {
+          setShowForm(false);
+          setEditFlat(null);
+        }
+      });
+    } else {
+      createFlat.mutate(data as Omit<Flat, 'id' | 'created_at' | 'updated_at'>, {
+        onSuccess: () => {
+          setShowForm(false);
+        }
+      });
+    }
+  };
+
+  const handleEdit = (flat: Flat) => {
+    setEditFlat(flat);
+    setShowForm(true);
+  };
+
+  const handleDelete = (flat: Flat) => {
+    setDeleteConfirm(flat);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      deleteFlat.mutate(deleteConfirm.id, {
+        onSuccess: () => setDeleteConfirm(null)
+      });
+    }
+  };
+
   return (
     <MainLayout>
       <Header 
@@ -77,6 +131,12 @@ const Flats = () => {
               className="pl-9"
             />
           </div>
+          {isAdmin && (
+            <Button onClick={() => { setEditFlat(null); setShowForm(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              {language === 'bn' ? 'নতুন ফ্ল্যাট' : 'Add Flat'}
+            </Button>
+          )}
         </div>
 
         {/* Flats Table */}
@@ -98,7 +158,7 @@ const Flats = () => {
                   <TableHead>{t.flats.owner}</TableHead>
                   <TableHead>{t.flats.contact}</TableHead>
                   <TableHead>{t.flats.parking}</TableHead>
-                  <TableHead className="text-right">{t.common.details}</TableHead>
+                  <TableHead className="text-right">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -129,9 +189,21 @@ const Flats = () => {
                         ) : '-'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedFlat(flat)}>
-                          {t.common.details}
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedFlat(flat)}>
+                            {t.common.details}
+                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => handleEdit(flat)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(flat)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -214,6 +286,38 @@ const Flats = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Flat Form */}
+      <FlatForm
+        isOpen={showForm}
+        onClose={() => { setShowForm(false); setEditFlat(null); }}
+        onSubmit={handleFormSubmit}
+        editData={editFlat}
+        isLoading={createFlat.isPending || updateFlat.isPending}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'bn' ? 'ফ্ল্যাট মুছে ফেলতে চান?' : 'Delete Flat?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'bn' 
+                ? `ফ্ল্যাট ${deleteConfirm?.flat_number} মুছে ফেলা হবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।`
+                : `Flat ${deleteConfirm?.flat_number} will be deleted. This action cannot be undone.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{language === 'bn' ? 'বাতিল' : 'Cancel'}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {language === 'bn' ? 'মুছুন' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
