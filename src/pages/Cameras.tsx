@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Camera, Wifi, WifiOff, ExternalLink, Plus, Trash2, Copy, Monitor, Smartphone } from 'lucide-react';
+import { Camera, Wifi, WifiOff, ExternalLink, Plus, Trash2, Copy, Monitor, Smartphone, Play } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -77,6 +77,17 @@ const Cameras = () => {
 
   const openCameraWeb = (ip: string) => {
     window.open(`http://${ip}`, '_blank');
+  };
+
+  const openInVLC = (ip: string) => {
+    const rtspUrl = `rtsp://${ip}:554/live/ch00_0`;
+    window.location.href = `vlc://${rtspUrl}`;
+    toast({
+      title: language === 'bn' ? 'VLC খোলা হচ্ছে...' : 'Opening VLC...',
+      description: language === 'bn' 
+        ? 'VLC ইনস্টল থাকলে স্বয়ংক্রিয়ভাবে খুলবে' 
+        : 'VLC will open automatically if installed',
+    });
   };
 
   return (
@@ -235,7 +246,7 @@ const Cameras = () => {
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -244,7 +255,17 @@ const Cameras = () => {
                       onClick={() => camera.camera_id && openCameraWeb(camera.camera_id)}
                     >
                       <Monitor className="h-4 w-4 mr-2" />
-                      {language === 'bn' ? 'ওয়েব ভিউ' : 'Web View'}
+                      {language === 'bn' ? 'ওয়েব' : 'Web'}
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="w-full"
+                      disabled={!camera.camera_id || camera.status === 'offline'}
+                      onClick={() => camera.camera_id && openInVLC(camera.camera_id)}
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      VLC
                     </Button>
                     <Button 
                       variant="outline" 
@@ -254,7 +275,7 @@ const Cameras = () => {
                       onClick={() => camera.camera_id && copyToClipboard(camera.camera_id)}
                     >
                       <Smartphone className="h-4 w-4 mr-2" />
-                      {language === 'bn' ? 'অ্যাপে দেখুন' : 'V380 App'}
+                      {language === 'bn' ? 'অ্যাপ' : 'App'}
                     </Button>
                   </div>
                   
