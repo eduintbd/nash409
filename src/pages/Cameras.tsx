@@ -79,14 +79,24 @@ const Cameras = () => {
     window.open(`http://${ip}`, '_blank');
   };
 
-  const openInVLC = (ip: string) => {
+  const openInVLC = (ip: string, name: string) => {
     const rtspUrl = `rtsp://${ip}:554/live/ch00_0`;
-    window.location.href = `vlc://${rtspUrl}`;
+    // Create a .m3u playlist file that VLC will open
+    const playlistContent = `#EXTM3U\n#EXTINF:-1,${name}\n${rtspUrl}`;
+    const blob = new Blob([playlistContent], { type: 'audio/x-mpegurl' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name.replace(/\s+/g, '_')}.m3u`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     toast({
-      title: language === 'bn' ? 'VLC খোলা হচ্ছে...' : 'Opening VLC...',
+      title: language === 'bn' ? 'ফাইল ডাউনলোড হয়েছে' : 'File Downloaded',
       description: language === 'bn' 
-        ? 'VLC ইনস্টল থাকলে স্বয়ংক্রিয়ভাবে খুলবে' 
-        : 'VLC will open automatically if installed',
+        ? 'ডাউনলোড করা .m3u ফাইলটি খুলুন - VLC স্বয়ংক্রিয়ভাবে শুরু হবে' 
+        : 'Open the downloaded .m3u file - VLC will start automatically',
     });
   };
 
@@ -262,7 +272,7 @@ const Cameras = () => {
                       size="sm" 
                       className="w-full"
                       disabled={!camera.camera_id || camera.status === 'offline'}
-                      onClick={() => camera.camera_id && openInVLC(camera.camera_id)}
+                      onClick={() => camera.camera_id && openInVLC(camera.camera_id, camera.name)}
                     >
                       <Play className="h-4 w-4 mr-2" />
                       VLC
