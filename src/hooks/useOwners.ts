@@ -33,20 +33,33 @@ export const useCreateOwner = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (owner: Omit<Owner, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (owner: Omit<Owner, 'id' | 'created_at' | 'updated_at'> & { flat_ids?: string[] }) => {
+      const { flat_ids, ...ownerData } = owner;
+      
       const { data, error } = await supabase
         .from('owners')
-        .insert(owner)
+        .insert(ownerData)
         .select()
         .single();
       if (error) throw error;
       
-      // Auto-update flat status to 'owner-occupied' when owner is assigned
-      if (owner.flat_id) {
+      // Create owner_flats entries for multiple flats
+      if (flat_ids && flat_ids.length > 0) {
+        const ownerFlatsData = flat_ids.map(flatId => ({
+          owner_id: data.id,
+          flat_id: flatId,
+        }));
+        
+        const { error: ownerFlatsError } = await supabase
+          .from('owner_flats')
+          .insert(ownerFlatsData);
+        if (ownerFlatsError) throw ownerFlatsError;
+        
+        // Update all flats status to 'owner-occupied'
         await supabase
           .from('flats')
           .update({ status: 'owner-occupied' })
-          .eq('id', owner.flat_id);
+          .in('id', flat_ids);
       }
       
       return data;
@@ -54,6 +67,8 @@ export const useCreateOwner = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owners'] });
       queryClient.invalidateQueries({ queryKey: ['flats'] });
+      queryClient.invalidateQueries({ queryKey: ['owner_flats'] });
+      queryClient.invalidateQueries({ queryKey: ['all_owner_flats'] });
       toast({ title: 'Owner added / মালিক যুক্ত হয়েছে' });
     },
     onError: (error) => {
@@ -66,7 +81,7 @@ export const useUpdateOwner = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Owner> & { id: string }) => {
+    mutationFn: async ({ id, flat_ids, ...updates }: Partial<Owner> & { id: string; flat_ids?: string[] }) => {
       const { data, error } = await supabase
         .from('owners')
         .update(updates)
@@ -74,10 +89,41 @@ export const useUpdateOwner = () => {
         .select()
         .single();
       if (error) throw error;
+      
+      // Update owner_flats if flat_ids is provided
+      if (flat_ids !== undefined) {
+        // Delete existing owner_flats
+        await supabase
+          .from('owner_flats')
+          .delete()
+          .eq('owner_id', id);
+        
+        // Insert new owner_flats
+        if (flat_ids.length > 0) {
+          const ownerFlatsData = flat_ids.map(flatId => ({
+            owner_id: id,
+            flat_id: flatId,
+          }));
+          
+          await supabase
+            .from('owner_flats')
+            .insert(ownerFlatsData);
+          
+          // Update all new flats status to 'owner-occupied'
+          await supabase
+            .from('flats')
+            .update({ status: 'owner-occupied' })
+            .in('id', flat_ids);
+        }
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owners'] });
+      queryClient.invalidateQueries({ queryKey: ['flats'] });
+      queryClient.invalidateQueries({ queryKey: ['owner_flats'] });
+      queryClient.invalidateQueries({ queryKey: ['all_owner_flats'] });
       toast({ title: 'Owner updated / মালিক আপডেট হয়েছে' });
     },
     onError: (error) => {
@@ -97,6 +143,8 @@ export const useDeleteOwner = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owners'] });
       queryClient.invalidateQueries({ queryKey: ['flats'] });
+      queryClient.invalidateQueries({ queryKey: ['owner_flats'] });
+      queryClient.invalidateQueries({ queryKey: ['all_owner_flats'] });
       toast({ title: 'Owner deleted / মালিক মুছে ফেলা হয়েছে' });
     },
     onError: (error) => {
