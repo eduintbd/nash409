@@ -31,37 +31,88 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userFlatId, setUserFlatId] = useState<string | null>(null);
 
   const checkUserRole = async (userId: string, email: string | undefined) => {
-    // Check user_roles table
+    // Check user_roles table first
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
       .maybeSingle();
     
-    const role = roleData?.role as AppRole | null;
+    let role = roleData?.role as AppRole | null;
+    let flatId: string | null = null;
+
+    // If no explicit role or role is 'user', check if user is owner/tenant by user_id or email
+    if (!role || role === 'user') {
+      // Check owners table by user_id first, then by email
+      const { data: ownerByUserId } = await supabase
+        .from('owners')
+        .select('flat_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (ownerByUserId?.flat_id) {
+        role = 'owner';
+        flatId = ownerByUserId.flat_id;
+      } else if (email) {
+        const { data: ownerByEmail } = await supabase
+          .from('owners')
+          .select('flat_id')
+          .eq('email', email)
+          .maybeSingle();
+        
+        if (ownerByEmail?.flat_id) {
+          role = 'owner';
+          flatId = ownerByEmail.flat_id;
+        }
+      }
+
+      // If not owner, check tenants table
+      if (!flatId) {
+        const { data: tenantByUserId } = await supabase
+          .from('tenants')
+          .select('flat_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (tenantByUserId?.flat_id) {
+          role = 'tenant';
+          flatId = tenantByUserId.flat_id;
+        } else if (email) {
+          const { data: tenantByEmail } = await supabase
+            .from('tenants')
+            .select('flat_id')
+            .eq('email', email)
+            .maybeSingle();
+          
+          if (tenantByEmail?.flat_id) {
+            role = 'tenant';
+            flatId = tenantByEmail.flat_id;
+          }
+        }
+      }
+    } else if (role === 'owner') {
+      // Get flat_id for owner
+      const { data: ownerData } = await supabase
+        .from('owners')
+        .select('flat_id')
+        .or(`user_id.eq.${userId},email.eq.${email || ''}`)
+        .maybeSingle();
+      flatId = ownerData?.flat_id || null;
+    } else if (role === 'tenant') {
+      // Get flat_id for tenant
+      const { data: tenantData } = await supabase
+        .from('tenants')
+        .select('flat_id')
+        .or(`user_id.eq.${userId},email.eq.${email || ''}`)
+        .maybeSingle();
+      flatId = tenantData?.flat_id || null;
+    }
+
     setUserRole(role);
     setIsAdmin(role === 'admin');
     setIsOwner(role === 'owner');
     setIsTenant(role === 'tenant');
-
-    // Get flat_id based on role
-    if (role === 'owner' && email) {
-      const { data: ownerData } = await supabase
-        .from('owners')
-        .select('flat_id')
-        .eq('email', email)
-        .maybeSingle();
-      setUserFlatId(ownerData?.flat_id || null);
-    } else if (role === 'tenant' && email) {
-      const { data: tenantData } = await supabase
-        .from('tenants')
-        .select('flat_id')
-        .eq('email', email)
-        .maybeSingle();
-      setUserFlatId(tenantData?.flat_id || null);
-    } else {
-      setUserFlatId(null);
-    }
+    setUserFlatId(flatId);
   };
 
   useEffect(() => {

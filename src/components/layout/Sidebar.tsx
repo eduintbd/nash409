@@ -33,9 +33,10 @@ export function Sidebar() {
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
   ];
 
-  // Limited navigation for owners (can see building expenses)
+  // Limited navigation for owners (can see building expenses + flats)
   const ownerNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
+    { name: t.nav.flats, href: '/flats', icon: Building2 },
     { name: t.nav.invoices, href: '/invoices', icon: Receipt },
     { name: t.nav.expenses, href: '/expenses', icon: Wallet },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
