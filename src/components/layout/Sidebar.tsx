@@ -11,13 +11,14 @@ import {
   Bot,
   Settings,
   LogOut,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function Sidebar() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { isAdmin, isOwner, isTenant, userRole, user } = useAuth();
 
   // Full navigation for admin
@@ -31,6 +32,7 @@ export function Sidebar() {
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
     { name: t.nav.cameras, href: '/cameras', icon: Camera },
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
+    { name: language === 'bn' ? 'ব্যবহারকারী অনুমোদন' : 'User Approvals', href: '/user-approvals', icon: UserCheck },
   ];
 
   // Limited navigation for owners (can see building expenses + flats)

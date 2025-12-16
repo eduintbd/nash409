@@ -9,7 +9,7 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isApproved } = useAuth();
 
   // Show loading while checking auth
   if (isLoading) {
@@ -23,6 +23,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Redirect to auth if not logged in
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Redirect to pending approval page if not approved
+  if (!isApproved) {
+    return <Navigate to="/pending-approval" replace />;
   }
 
   return (
