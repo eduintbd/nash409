@@ -32,7 +32,7 @@ export const useOwnerFlats = (ownerId?: string) => {
       if (!ownerId) return [];
       const { data, error } = await supabase
         .from('owner_flats')
-        .select('*, flats(id, flat_number, floor, status)')
+        .select('*, flats(id, flat_number, floor, size, status, parking_spot, building_name)')
         .eq('owner_id', ownerId);
       if (error) throw error;
       return data;
@@ -60,7 +60,7 @@ export const useMyOwnerFlats = (userId?: string) => {
       // Then get all flats for this owner
       const { data, error } = await supabase
         .from('owner_flats')
-        .select('*, flats(id, flat_number, floor, status)')
+        .select('*, flats(id, flat_number, floor, size, status, parking_spot, building_name)')
         .eq('owner_id', owner.id);
       if (error) throw error;
       return data;
