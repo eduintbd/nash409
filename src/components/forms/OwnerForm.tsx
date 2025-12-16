@@ -61,10 +61,12 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
   // Property/Building selection state
   const [selectedBuilding, setSelectedBuilding] = useState<string>('');
   const [isNewProperty, setIsNewProperty] = useState(false);
-  const [isAddingNewFlat, setIsAddingNewFlat] = useState(false);
-  const [newFlatNumber, setNewFlatNumber] = useState('');
-  const [newFlatFloor, setNewFlatFloor] = useState('2');
+  const [isAddingNewProperty, setIsAddingNewProperty] = useState(false);
   const [newPropertyName, setNewPropertyName] = useState('');
+  const [numberOfFlats, setNumberOfFlats] = useState('1');
+  const [fromFlatNumber, setFromFlatNumber] = useState('');
+  const [toFlatNumber, setToFlatNumber] = useState('');
+  const [startFloor, setStartFloor] = useState('2');
 
   // Track occupancy type for each selected flat
   const [flatOccupancy, setFlatOccupancy] = useState<Record<string, OccupancyType>>({});
@@ -128,10 +130,12 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
       setFlatOccupancy({});
       setSelectedBuilding('');
       setIsNewProperty(false);
-      setIsAddingNewFlat(false);
-      setNewFlatNumber('');
-      setNewFlatFloor('2');
+      setIsAddingNewProperty(false);
       setNewPropertyName('');
+      setNumberOfFlats('1');
+      setFromFlatNumber('');
+      setToFlatNumber('');
+      setStartFloor('2');
     }
   }, [editData, existingFlatIds, open, flats]);
 
@@ -148,15 +152,19 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
       ownership_start: formData.ownership_start,
       flat_ids: formData.flat_ids,
       flat_occupancy: flatOccupancy,
-      // For new property or new flat in existing building
+      // For new property with multiple flats
       new_property: isNewProperty ? {
-        flat_number: newFlatNumber,
-        floor: parseInt(newFlatFloor),
         building_name: newPropertyName,
-      } : isAddingNewFlat ? {
-        flat_number: newFlatNumber,
-        floor: parseInt(newFlatFloor),
+        number_of_flats: parseInt(numberOfFlats),
+        from_flat_number: fromFlatNumber,
+        to_flat_number: toFlatNumber,
+        start_floor: parseInt(startFloor),
+      } : isAddingNewProperty ? {
         building_name: selectedBuilding,
+        number_of_flats: parseInt(numberOfFlats),
+        from_flat_number: fromFlatNumber,
+        to_flat_number: toFlatNumber,
+        start_floor: parseInt(startFloor),
       } : null,
     };
 
@@ -203,18 +211,21 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
   const handleBuildingChange = (value: string) => {
     if (value === 'new') {
       setIsNewProperty(true);
-      setIsAddingNewFlat(false);
+      setIsAddingNewProperty(false);
       setSelectedBuilding('');
       setFormData(prev => ({ ...prev, flat_ids: [] }));
       setFlatOccupancy({});
     } else {
       setIsNewProperty(false);
-      setIsAddingNewFlat(false);
+      setIsAddingNewProperty(false);
       setSelectedBuilding(value);
       setFormData(prev => ({ ...prev, flat_ids: [] }));
       setFlatOccupancy({});
-      setNewFlatNumber('');
-      setNewFlatFloor('2');
+      setNewPropertyName('');
+      setNumberOfFlats('1');
+      setFromFlatNumber('');
+      setToFlatNumber('');
+      setStartFloor('2');
     }
   };
 
@@ -247,14 +258,16 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
     ownerWillStay: language === 'bn' ? 'মালিক থাকবেন' : 'Owner will stay',
     willRent: language === 'bn' ? 'ভাড়া দেবেন' : 'Will rent out',
     newPropertyName: language === 'bn' ? 'প্রপার্টির নাম' : 'Property Name',
-    flatNumber: language === 'bn' ? 'ফ্ল্যাট নম্বর' : 'Flat Number',
+    numberOfFlats: language === 'bn' ? 'ফ্ল্যাট সংখ্যা' : 'Number of Flats',
+    fromFlatNumber: language === 'bn' ? 'শুরু ফ্ল্যাট নম্বর' : 'From Flat Number',
+    toFlatNumber: language === 'bn' ? 'শেষ ফ্ল্যাট নম্বর' : 'To Flat Number',
+    startFloor: language === 'bn' ? 'শুরু তলা' : 'Starting Floor',
     noFlatsAvailable: language === 'bn' ? 'এই প্রপার্টিতে কোন খালি ফ্ল্যাট নেই' : 'No available flats in this property',
-    addNewFlat: language === 'bn' ? '+ নতুন ফ্ল্যাট যুক্ত করুন' : '+ Add New Flat',
-    orAddNewFlat: language === 'bn' ? 'অথবা নতুন ফ্ল্যাট যুক্ত করুন' : 'Or add a new flat',
+    addNewProperty: language === 'bn' ? '+ নতুন প্রপার্টি যুক্ত করুন' : '+ Add Property',
   };
 
   const canSubmit = formData.name && formData.phone && 
-    ((formData.flat_ids.length > 0) || (isNewProperty && newFlatNumber && newPropertyName) || (isAddingNewFlat && newFlatNumber && selectedBuilding));
+    ((formData.flat_ids.length > 0) || (isNewProperty && fromFlatNumber && newPropertyName) || (isAddingNewProperty && fromFlatNumber));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -314,31 +327,52 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
                   placeholder={language === 'bn' ? 'যেমন: গ্রিন ভিউ টাওয়ার' : 'e.g., Green View Tower'}
                 />
               </div>
+              <div>
+                <Label htmlFor="numberOfFlats">{t.numberOfFlats} *</Label>
+                <Input
+                  id="numberOfFlats"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={numberOfFlats}
+                  onChange={(e) => setNumberOfFlats(e.target.value)}
+                  placeholder="1"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="newFlatNumber">{t.flatNumber} *</Label>
+                  <Label htmlFor="fromFlatNumber">{t.fromFlatNumber} *</Label>
                   <Input
-                    id="newFlatNumber"
-                    value={newFlatNumber}
-                    onChange={(e) => setNewFlatNumber(e.target.value)}
-                    placeholder={language === 'bn' ? 'যেমন: 3A' : 'e.g., 3A'}
+                    id="fromFlatNumber"
+                    value={fromFlatNumber}
+                    onChange={(e) => setFromFlatNumber(e.target.value)}
+                    placeholder={language === 'bn' ? 'যেমন: 2A' : 'e.g., 2A'}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="newFlatFloor">{t.floor} *</Label>
-                  <Select value={newFlatFloor} onValueChange={setNewFlatFloor}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(floor => (
-                        <SelectItem key={floor} value={floor.toString()}>
-                          {floor}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="toFlatNumber">{t.toFlatNumber}</Label>
+                  <Input
+                    id="toFlatNumber"
+                    value={toFlatNumber}
+                    onChange={(e) => setToFlatNumber(e.target.value)}
+                    placeholder={language === 'bn' ? 'যেমন: 6D' : 'e.g., 6D'}
+                  />
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="startFloor">{t.startFloor} *</Label>
+                <Select value={startFloor} onValueChange={setStartFloor}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(floor => (
+                      <SelectItem key={floor} value={floor.toString()}>
+                        {floor}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="p-2 bg-muted/50 rounded-md">
                 <p className="text-xs text-muted-foreground mb-2">{t.occupancyType}</p>
@@ -380,7 +414,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
                               id={`flat-${flat.id}`}
                               checked={formData.flat_ids.includes(flat.id)}
                               onCheckedChange={() => handleFlatToggle(flat.id)}
-                              disabled={isAddingNewFlat}
+                              disabled={isAddingNewProperty}
                             />
                             <label
                               htmlFor={`flat-${flat.id}`}
@@ -428,56 +462,79 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
                 )}
               </div>
 
-              {/* Add New Flat Option */}
+              {/* Add New Property Option */}
               <div className="border-t pt-3">
                 <Button
                   type="button"
-                  variant={isAddingNewFlat ? "secondary" : "outline"}
+                  variant={isAddingNewProperty ? "secondary" : "outline"}
                   size="sm"
                   className="w-full"
                   onClick={() => {
-                    setIsAddingNewFlat(!isAddingNewFlat);
-                    if (!isAddingNewFlat) {
+                    setIsAddingNewProperty(!isAddingNewProperty);
+                    if (!isAddingNewProperty) {
                       setFormData(prev => ({ ...prev, flat_ids: [] }));
                       setFlatOccupancy({ 'new': 'owner-occupied' });
                     } else {
-                      setNewFlatNumber('');
-                      setNewFlatFloor('2');
+                      setNumberOfFlats('1');
+                      setFromFlatNumber('');
+                      setToFlatNumber('');
+                      setStartFloor('2');
                       setFlatOccupancy({});
                     }
                   }}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  {t.addNewFlat}
+                  {t.addNewProperty}
                 </Button>
 
-                {isAddingNewFlat && (
+                {isAddingNewProperty && (
                   <div className="mt-3 space-y-3 p-3 border rounded-md bg-muted/30">
+                    <div>
+                      <Label htmlFor="numberOfFlatsExisting">{t.numberOfFlats} *</Label>
+                      <Input
+                        id="numberOfFlatsExisting"
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={numberOfFlats}
+                        onChange={(e) => setNumberOfFlats(e.target.value)}
+                        placeholder="1"
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="newFlatNumberExisting">{t.flatNumber} *</Label>
+                        <Label htmlFor="fromFlatNumberExisting">{t.fromFlatNumber} *</Label>
                         <Input
-                          id="newFlatNumberExisting"
-                          value={newFlatNumber}
-                          onChange={(e) => setNewFlatNumber(e.target.value)}
-                          placeholder={language === 'bn' ? 'যেমন: 3A' : 'e.g., 3A'}
+                          id="fromFlatNumberExisting"
+                          value={fromFlatNumber}
+                          onChange={(e) => setFromFlatNumber(e.target.value)}
+                          placeholder={language === 'bn' ? 'যেমন: 2A' : 'e.g., 2A'}
                         />
                       </div>
                       <div>
-                        <Label htmlFor="newFlatFloorExisting">{t.floor} *</Label>
-                        <Select value={newFlatFloor} onValueChange={setNewFlatFloor}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(floor => (
-                              <SelectItem key={floor} value={floor.toString()}>
-                                {floor}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label htmlFor="toFlatNumberExisting">{t.toFlatNumber}</Label>
+                        <Input
+                          id="toFlatNumberExisting"
+                          value={toFlatNumber}
+                          onChange={(e) => setToFlatNumber(e.target.value)}
+                          placeholder={language === 'bn' ? 'যেমন: 6D' : 'e.g., 6D'}
+                        />
                       </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="startFloorExisting">{t.startFloor} *</Label>
+                      <Select value={startFloor} onValueChange={setStartFloor}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(floor => (
+                            <SelectItem key={floor} value={floor.toString()}>
+                              {floor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="p-2 bg-muted/50 rounded-md">
                       <p className="text-xs text-muted-foreground mb-2">{t.occupancyType}</p>
