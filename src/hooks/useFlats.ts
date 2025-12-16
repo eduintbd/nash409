@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 export interface Flat {
   id: string;
   flat_number: string;
+  building_name: string | null;
   floor: number;
   size: number;
   status: 'owner-occupied' | 'tenant' | 'vacant';

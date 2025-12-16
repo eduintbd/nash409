@@ -150,6 +150,7 @@ export type Database = {
       }
       flats: {
         Row: {
+          building_name: string | null
           created_at: string
           flat_number: string
           floor: number
@@ -160,6 +161,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          building_name?: string | null
           created_at?: string
           flat_number: string
           floor: number
@@ -170,6 +172,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          building_name?: string | null
           created_at?: string
           flat_number?: string
           floor?: number
