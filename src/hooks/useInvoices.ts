@@ -12,6 +12,7 @@ export interface Invoice {
   status: 'paid' | 'unpaid' | 'overdue';
   paid_date: string | null;
   description: string | null;
+  invoice_type: 'rent' | 'service_charge' | 'service_request';
   created_at: string;
   updated_at: string;
 }

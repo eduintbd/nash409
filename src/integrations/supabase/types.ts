@@ -189,6 +189,7 @@ export type Database = {
           due_date: string
           flat_id: string
           id: string
+          invoice_type: string
           month: string
           paid_date: string | null
           status: Database["public"]["Enums"]["invoice_status"]
@@ -202,6 +203,7 @@ export type Database = {
           due_date: string
           flat_id: string
           id?: string
+          invoice_type?: string
           month: string
           paid_date?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
@@ -215,6 +217,7 @@ export type Database = {
           due_date?: string
           flat_id?: string
           id?: string
+          invoice_type?: string
           month?: string
           paid_date?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]

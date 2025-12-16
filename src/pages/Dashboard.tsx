@@ -51,8 +51,8 @@ const Dashboard = () => {
   const pendingPayments = userInvoices?.filter(inv => inv.status === 'unpaid' || inv.status === 'overdue').length || 0;
   const openRequests = userRequests?.filter(req => req.status === 'open' || req.status === 'in-progress').length || 0;
 
-  // Building totals (for admin)
-  const totalIncome = invoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
+  // Building totals (for admin) - exclude service_request invoices from community income
+  const totalIncome = invoices?.filter(i => i.status === 'paid' && (i as any).invoice_type !== 'service_request').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
   const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
   
   // Owner rental income (from their flats only)
