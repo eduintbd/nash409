@@ -35,9 +35,10 @@ interface TenantFormProps {
     start_date: string;
     end_date: string | null;
   };
+  preselectedFlatId?: string;
 }
 
-export const TenantForm = ({ open, onOpenChange, editData }: TenantFormProps) => {
+export const TenantForm = ({ open, onOpenChange, editData, preselectedFlatId }: TenantFormProps) => {
   const { language } = useLanguage();
   const { data: flats } = useFlats();
   const { data: owners } = useOwners();
@@ -74,12 +75,12 @@ export const TenantForm = ({ open, onOpenChange, editData }: TenantFormProps) =>
         phone: '',
         nid: '',
         rent_amount: '',
-        flat_id: '',
+        flat_id: preselectedFlatId || '',
         start_date: new Date().toISOString().split('T')[0],
         end_date: '',
       });
     }
-  }, [editData, open]);
+  }, [editData, open, preselectedFlatId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
