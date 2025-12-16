@@ -9,10 +9,10 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { user, isLoading, isApproved } = useAuth();
+  const { user, isLoading, isApproved, userRole } = useAuth();
 
-  // Show loading while checking auth
-  if (isLoading) {
+  // Show loading while checking auth or role
+  if (isLoading || (user && userRole === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -25,8 +25,8 @@ export function MainLayout({ children }: MainLayoutProps) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect to pending approval page if not approved
-  if (!isApproved) {
+  // Redirect to pending approval page if not approved (after role check is complete)
+  if (userRole !== null && !isApproved) {
     return <Navigate to="/pending-approval" replace />;
   }
 
