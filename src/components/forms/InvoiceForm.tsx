@@ -60,8 +60,8 @@ export const InvoiceForm = ({ open, onOpenChange }: InvoiceFormProps) => {
   };
 
   const t = {
-    title: language === 'bn' ? 'বিল তৈরি করুন' : 'Generate Invoices',
-    description: language === 'bn' ? 'সকল অকুপায়েড ফ্ল্যাটের জন্য বিল তৈরি হবে' : 'Invoices will be generated for all occupied flats',
+    title: language === 'bn' ? 'সার্ভিস চার্জ বিল তৈরি করুন' : 'Generate Service Charge',
+    description: language === 'bn' ? 'সকল ফ্ল্যাটের জন্য (ভ্যাকেন্ট সহ) সার্ভিস চার্জ বিল তৈরি হবে' : 'Service charge invoices will be generated for all flats (including vacant)',
     month: language === 'bn' ? 'মাস' : 'Month',
     year: language === 'bn' ? 'বছর' : 'Year',
     amount: language === 'bn' ? 'পরিমাণ (৳)' : 'Amount (৳)',
