@@ -3,6 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useExpenses, useExpenseCategories, useDeleteExpense } from '@/hooks/useExpenses';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,7 @@ import {
 
 const Expenses = () => {
   const { t, language } = useLanguage();
+  const { isAdmin } = useAuth();
   const { data: expenses, isLoading } = useExpenses();
   const { data: categories } = useExpenseCategories();
   const deleteExpense = useDeleteExpense();
@@ -129,10 +131,12 @@ const Expenses = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t.expenses.addExpense}
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setFormOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t.expenses.addExpense}
+            </Button>
+          )}
         </div>
 
         {/* Expenses Table */}
@@ -155,7 +159,7 @@ const Expenses = () => {
                   <TableHead>{t.expenses.vendor}</TableHead>
                   <TableHead>{t.expenses.paymentMethod}</TableHead>
                   <TableHead className="text-right">{t.common.amount}</TableHead>
-                  <TableHead></TableHead>
+                  {isAdmin && <TableHead></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -177,11 +181,13 @@ const Expenses = () => {
                     <TableCell className="text-right font-semibold text-destructive">
                       {formatBDT(expense.amount)}
                     </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(expense.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(expense.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
