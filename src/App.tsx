@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import PendingApproval from "./pages/PendingApproval";
 import UserApprovals from "./pages/UserApprovals";
 import MyTenant from "./pages/MyTenant";
+import TenantAgreement from "./pages/TenantAgreement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/cameras" element={<Cameras />} />
               <Route path="/assistant" element={<AIAssistant />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/tenant-agreement/:token" element={<TenantAgreement />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
