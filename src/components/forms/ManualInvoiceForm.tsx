@@ -46,7 +46,7 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
 
   const currentDate = new Date();
   const [flatId, setFlatId] = useState('');
-  const [invoiceType, setInvoiceType] = useState<'rent' | 'other'>('rent');
+  const [invoiceType, setInvoiceType] = useState<'rent' | 'service_charge' | 'other'>('service_charge');
   const [month, setMonth] = useState(months[currentDate.getMonth()]);
   const [year, setYear] = useState(currentDate.getFullYear());
   const [amount, setAmount] = useState(3000);
@@ -77,9 +77,10 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
     title: isOwner ? 'Create Invoice for Tenant' : 'Add Invoice',
     description: isOwner ? 'Create an invoice for your tenant' : 'Add a new invoice',
     selectFlat: 'Select Flat',
-    invoiceType: 'Invoice Type',
+    invoiceType: 'Bill Type',
     rent: 'Rent',
-    other: 'Other',
+    serviceCharge: 'Service Charge',
+    other: 'Others',
     tenant: 'Tenant',
     month: 'Month',
     year: 'Year',
@@ -95,6 +96,7 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
     selectFlat: 'ফ্ল্যাট নির্বাচন করুন',
     invoiceType: 'বিলের ধরন',
     rent: 'ভাড়া',
+    serviceCharge: 'সার্ভিস চার্জ',
     other: 'অন্যান্য',
     tenant: 'ভাড়াটিয়া',
     month: 'মাস',
@@ -113,6 +115,12 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
     e.preventDefault();
     if (!flatId) return;
 
+    const defaultDescription = invoiceType === 'rent' 
+      ? (language === 'en' ? 'Monthly Rent' : 'মাসিক ভাড়া')
+      : invoiceType === 'service_charge'
+      ? (language === 'en' ? 'Monthly Service Charge' : 'মাসিক সার্ভিস চার্জ')
+      : null;
+
     await createInvoice.mutateAsync({
       flat_id: flatId,
       month,
@@ -121,15 +129,15 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
       due_date: dueDate,
       status: 'unpaid',
       paid_date: null,
-      description: description || (invoiceType === 'rent' ? (language === 'en' ? 'Monthly Rent' : 'মাসিক ভাড়া') : null),
-      invoice_type: invoiceType === 'rent' ? 'rent' : 'service_charge',
+      description: description || defaultDescription,
+      invoice_type: invoiceType === 'other' ? 'service_charge' : invoiceType,
     });
 
     onOpenChange(false);
     // Reset form
     setFlatId('');
     setDescription('');
-    setInvoiceType('rent');
+    setInvoiceType('service_charge');
   };
 
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i);
@@ -160,11 +168,12 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
 
           <div className="space-y-2">
             <Label>{labels.invoiceType}</Label>
-            <Select value={invoiceType} onValueChange={(v) => setInvoiceType(v as 'rent' | 'other')}>
+            <Select value={invoiceType} onValueChange={(v) => setInvoiceType(v as 'rent' | 'service_charge' | 'other')}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="service_charge">{labels.serviceCharge}</SelectItem>
                 <SelectItem value="rent">{labels.rent}</SelectItem>
                 <SelectItem value="other">{labels.other}</SelectItem>
               </SelectContent>

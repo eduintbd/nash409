@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { useInvoices, useUpdateInvoice } from '@/hooks/useInvoices';
 import { useOwners } from '@/hooks/useOwners';
 import { useTenants } from '@/hooks/useTenants';
+import { useFlats } from '@/hooks/useFlats';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,7 @@ const Invoices = () => {
   const { data: invoices, isLoading } = useInvoices();
   const { data: owners } = useOwners();
   const { data: tenants } = useTenants();
+  const { data: flats } = useFlats();
   const updateInvoice = useUpdateInvoice();
   
   const [search, setSearch] = useState('');
@@ -78,6 +80,29 @@ const Invoices = () => {
 
   const getOwner = (flatId: string) => owners?.find(o => o.flat_id === flatId);
   const getTenant = (flatId: string) => tenants?.find(t => t.flat_id === flatId);
+  const getFlat = (flatId: string) => flats?.find(f => f.id === flatId);
+
+  // Get bill payer based on flat status
+  const getBillPayBy = (flatId: string) => {
+    const flat = getFlat(flatId);
+    const owner = getOwner(flatId);
+    const tenant = getTenant(flatId);
+    
+    if (flat?.status === 'tenant' && tenant) {
+      return tenant.name;
+    }
+    // For owner-occupied or vacant, owner pays
+    return owner?.name || '-';
+  };
+
+  const getBillTypeLabel = (invoiceType: string) => {
+    if (language === 'bn') {
+      return invoiceType === 'rent' ? 'ভাড়া' : 
+             invoiceType === 'service_charge' ? 'সার্ভিস চার্জ' : 'অন্যান্য';
+    }
+    return invoiceType === 'rent' ? 'Rent' : 
+           invoiceType === 'service_charge' ? 'Service Charge' : 'Others';
+  };
 
   // Can record payment: Admin or Owner (for their flats)
   const canRecordPayment = (flatId: string) => {
@@ -184,7 +209,8 @@ const Invoices = () => {
                 <TableRow className="table-header">
                   <TableHead>{t.invoices.invoiceNo}</TableHead>
                   <TableHead>{t.invoices.flat}</TableHead>
-                  <TableHead>{isOwner ? (language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant') : t.flats.owner}</TableHead>
+                  <TableHead>{language === 'bn' ? 'বিল প্রদানকারী' : 'Bill Pay By'}</TableHead>
+                  <TableHead>{language === 'bn' ? 'বিলের ধরন' : 'Bill Type'}</TableHead>
                   <TableHead>{t.invoices.period}</TableHead>
                   <TableHead>{t.common.amount}</TableHead>
                   <TableHead>{t.invoices.dueDate}</TableHead>
@@ -194,14 +220,17 @@ const Invoices = () => {
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice: any) => {
-                  const owner = getOwner(invoice.flat_id);
-                  const tenant = getTenant(invoice.flat_id);
                   return (
                     <TableRow key={invoice.id} className="table-row-hover">
                       <TableCell className="font-mono text-sm">INV-{invoice.id.slice(0, 6)}</TableCell>
                       <TableCell className="font-medium">{invoice.flats?.flat_number}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {isOwner ? (tenant?.name || '-') : (owner?.name || '-')}
+                        {getBillPayBy(invoice.flat_id)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">
+                          {getBillTypeLabel(invoice.invoice_type)}
+                        </Badge>
                       </TableCell>
                       <TableCell>{invoice.month} {invoice.year}</TableCell>
                       <TableCell className="font-semibold">{formatBDT(invoice.amount)}</TableCell>

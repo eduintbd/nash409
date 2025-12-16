@@ -83,11 +83,10 @@ export const useGenerateBulkInvoices = () => {
   
   return useMutation({
     mutationFn: async ({ month, year, amount, description }: { month: string; year: number; amount: number; description: string }) => {
-      // Get all flats
+      // Get ALL flats (including vacant) for service charge
       const { data: flats, error: flatsError } = await supabase
         .from('flats')
-        .select('id')
-        .neq('status', 'vacant');
+        .select('id');
       
       if (flatsError) throw flatsError;
       
@@ -101,6 +100,7 @@ export const useGenerateBulkInvoices = () => {
         due_date: dueDate.toISOString().split('T')[0],
         status: 'unpaid' as const,
         description,
+        invoice_type: 'service_charge' as const,
       }));
       
       const { error } = await supabase.from('invoices').insert(invoices);
