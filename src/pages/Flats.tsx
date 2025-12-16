@@ -37,10 +37,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Building2, User, Phone, Mail, Car, Plus, Pencil, Trash2, MapPin, Home } from 'lucide-react';
+import { Search, Building2, User, Phone, Mail, Car, Plus, Pencil, Trash2, MapPin, Home, BarChart3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
 import FlatForm from '@/components/forms/FlatForm';
+import { PropertyAnalytics } from '@/components/dashboard/PropertyAnalytics';
 
 const Flats = () => {
   const { t, language } = useLanguage();
@@ -191,6 +192,10 @@ const Flats = () => {
               <TabsTrigger value="owner-properties">
                 <User className="h-4 w-4 mr-2" />
                 {language === 'bn' ? 'মালিকদের সম্পত্তি' : 'Owner Properties'}
+              </TabsTrigger>
+              <TabsTrigger value="analytics">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                {language === 'bn' ? 'বিশ্লেষণ' : 'Analytics'}
               </TabsTrigger>
             </TabsList>
 
@@ -400,6 +405,25 @@ const Flats = () => {
                     </Card>
                   ))}
                 </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="analytics" className="space-y-4">
+              {isLoading ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+                  </div>
+                  <Skeleton className="h-64" />
+                </div>
+              ) : flats && flats.length > 0 ? (
+                <PropertyAnalytics flats={flats} />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    {language === 'bn' ? 'কোনো ফ্ল্যাট পাওয়া যায়নি' : 'No flats found'}
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
           </Tabs>
