@@ -3,6 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useInvoices, useUpdateInvoice } from '@/hooks/useInvoices';
 import { useOwners } from '@/hooks/useOwners';
+import { useTenants } from '@/hooks/useTenants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -37,9 +38,10 @@ const statusColors = {
 
 const Invoices = () => {
   const { t, language } = useLanguage();
-  const { isAdmin, isOwner, isTenant, userFlatId } = useAuth();
+  const { isAdmin, isOwner, isTenant, userFlatId, userFlatIds } = useAuth();
   const { data: invoices, isLoading } = useInvoices();
   const { data: owners } = useOwners();
+  const { data: tenants } = useTenants();
   const updateInvoice = useUpdateInvoice();
   
   const [search, setSearch] = useState('');
@@ -57,8 +59,12 @@ const Invoices = () => {
   const roleFilteredInvoices = invoices?.filter(invoice => {
     // Admin sees all
     if (isAdmin) return true;
-    // Owner/Tenant sees only their flat invoices
-    if ((isOwner || isTenant) && userFlatId) {
+    // Owner sees invoices for all their flats
+    if (isOwner && userFlatIds.length > 0) {
+      return userFlatIds.includes(invoice.flat_id);
+    }
+    // Tenant sees only their flat invoices
+    if (isTenant && userFlatId) {
       return invoice.flat_id === userFlatId;
     }
     return true; // Regular user sees all (can be restricted later)
@@ -71,7 +77,14 @@ const Invoices = () => {
   });
 
   const getOwner = (flatId: string) => owners?.find(o => o.flat_id === flatId);
+  const getTenant = (flatId: string) => tenants?.find(t => t.flat_id === flatId);
 
+  // Can record payment: Admin or Owner (for their flats)
+  const canRecordPayment = (flatId: string) => {
+    if (isAdmin) return true;
+    if (isOwner && userFlatIds.includes(flatId)) return true;
+    return false;
+  };
   const totalDue = filteredInvoices
     .filter(inv => inv.status !== 'paid')
     .reduce((sum, inv) => sum + Number(inv.amount), 0);
@@ -138,16 +151,19 @@ const Invoices = () => {
               </SelectContent>
             </Select>
           </div>
-          {isAdmin && (
+          {/* Admin can generate bulk invoices, Admin and Owner can add individual invoices */}
+          {(isAdmin || isOwner) && (
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setManualFormOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 {language === 'en' ? 'Add Invoice' : 'বিল যুক্ত করুন'}
               </Button>
-              <Button onClick={() => setFormOpen(true)}>
-                <FileText className="h-4 w-4 mr-2" />
-                {t.invoices.generateInvoice}
-              </Button>
+              {isAdmin && (
+                <Button onClick={() => setFormOpen(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t.invoices.generateInvoice}
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -168,22 +184,25 @@ const Invoices = () => {
                 <TableRow className="table-header">
                   <TableHead>{t.invoices.invoiceNo}</TableHead>
                   <TableHead>{t.invoices.flat}</TableHead>
-                  <TableHead>{t.flats.owner}</TableHead>
+                  <TableHead>{isOwner ? (language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant') : t.flats.owner}</TableHead>
                   <TableHead>{t.invoices.period}</TableHead>
                   <TableHead>{t.common.amount}</TableHead>
                   <TableHead>{t.invoices.dueDate}</TableHead>
                   <TableHead>{t.common.status}</TableHead>
-                  <TableHead className="text-right">{t.common.actions}</TableHead>
+                  {(isAdmin || isOwner) && <TableHead className="text-right">{t.common.actions}</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice: any) => {
                   const owner = getOwner(invoice.flat_id);
+                  const tenant = getTenant(invoice.flat_id);
                   return (
                     <TableRow key={invoice.id} className="table-row-hover">
                       <TableCell className="font-mono text-sm">INV-{invoice.id.slice(0, 6)}</TableCell>
                       <TableCell className="font-medium">{invoice.flats?.flat_number}</TableCell>
-                      <TableCell className="text-muted-foreground">{owner?.name || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {isOwner ? (tenant?.name || '-') : (owner?.name || '-')}
+                      </TableCell>
                       <TableCell>{invoice.month} {invoice.year}</TableCell>
                       <TableCell className="font-semibold">{formatBDT(invoice.amount)}</TableCell>
                       <TableCell>{new Date(invoice.due_date).toLocaleDateString(locale)}</TableCell>
@@ -192,22 +211,24 @@ const Invoices = () => {
                           {statusLabels[invoice.status as keyof typeof statusLabels]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        {invoice.status !== 'paid' ? (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleRecordPayment(invoice)}
-                            disabled={updateInvoice.isPending}
-                          >
-                            {t.invoices.recordPayment}
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {invoice.paid_date && new Date(invoice.paid_date).toLocaleDateString(locale)}
-                          </span>
-                        )}
-                      </TableCell>
+                      {(isAdmin || isOwner) && (
+                        <TableCell className="text-right">
+                          {invoice.status !== 'paid' && canRecordPayment(invoice.flat_id) ? (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleRecordPayment(invoice)}
+                              disabled={updateInvoice.isPending}
+                            >
+                              {t.invoices.recordPayment}
+                            </Button>
+                          ) : invoice.status === 'paid' ? (
+                            <span className="text-xs text-muted-foreground">
+                              {invoice.paid_date && new Date(invoice.paid_date).toLocaleDateString(locale)}
+                            </span>
+                          ) : null}
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useFlats } from '@/hooks/useFlats';
+import { useTenants } from '@/hooks/useTenants';
 import { useCreateInvoice } from '@/hooks/useInvoices';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -36,7 +39,9 @@ const monthsBn = [
 
 export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps) => {
   const { t, language } = useLanguage();
+  const { isAdmin, isOwner, userFlatIds } = useAuth();
   const { data: flats } = useFlats();
+  const { data: tenants } = useTenants();
   const createInvoice = useCreateInvoice();
 
   const currentDate = new Date();
@@ -52,32 +57,54 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'unpaid' | 'paid'>('unpaid');
 
+  // Filter flats based on user role
+  // Admin sees all flats, Owner sees only their flats
+  const availableFlats = useMemo(() => {
+    if (isAdmin) return flats || [];
+    if (isOwner && userFlatIds.length > 0) {
+      return flats?.filter(f => userFlatIds.includes(f.id)) || [];
+    }
+    return [];
+  }, [flats, isAdmin, isOwner, userFlatIds]);
+
+  // Get tenant info for selected flat
+  const selectedFlatTenant = useMemo(() => {
+    if (!flatId) return null;
+    return tenants?.find(t => t.flat_id === flatId);
+  }, [flatId, tenants]);
+
   const labels = language === 'en' ? {
-    title: 'Add Invoice',
+    title: isOwner ? 'Create Invoice for Tenant' : 'Add Invoice',
+    description: isOwner ? 'Create an invoice for your tenant' : 'Add a new invoice',
     selectFlat: 'Select Flat',
+    tenant: 'Tenant',
     month: 'Month',
     year: 'Year',
     amount: 'Amount (৳)',
     dueDate: 'Due Date',
-    description: 'Description',
+    invoiceDescription: 'Description',
     status: 'Status',
     unpaid: 'Unpaid',
     paid: 'Paid',
-    save: 'Save Invoice',
+    save: 'Create Invoice',
     cancel: 'Cancel',
+    noTenant: 'No tenant assigned',
   } : {
-    title: 'বিল যুক্ত করুন',
+    title: isOwner ? 'ভাড়াটিয়ার জন্য বিল তৈরি' : 'বিল যুক্ত করুন',
+    description: isOwner ? 'আপনার ভাড়াটিয়ার জন্য বিল তৈরি করুন' : 'নতুন বিল যুক্ত করুন',
     selectFlat: 'ফ্ল্যাট নির্বাচন করুন',
+    tenant: 'ভাড়াটিয়া',
     month: 'মাস',
     year: 'বছর',
     amount: 'পরিমাণ (৳)',
     dueDate: 'নির্ধারিত তারিখ',
-    description: 'বিবরণ',
+    invoiceDescription: 'বিবরণ',
     status: 'অবস্থা',
     unpaid: 'বকেয়া',
     paid: 'পরিশোধিত',
-    save: 'বিল সংরক্ষণ করুন',
+    save: 'বিল তৈরি করুন',
     cancel: 'বাতিল',
+    noTenant: 'কোন ভাড়াটিয়া নেই',
   };
 
   const displayMonths = language === 'bn' ? monthsBn : months;
@@ -111,6 +138,7 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{labels.title}</DialogTitle>
+          <DialogDescription>{labels.description}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -120,14 +148,27 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
                 <SelectValue placeholder={labels.selectFlat} />
               </SelectTrigger>
               <SelectContent>
-                {flats?.map((flat) => (
+                {availableFlats.map((flat) => (
                   <SelectItem key={flat.id} value={flat.id}>
-                    {flat.flat_number}
+                    {flat.flat_number} {flat.status === 'tenant' && '(Tenant)'}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Show tenant info for owner */}
+          {isOwner && flatId && (
+            <div className="p-3 bg-muted rounded-md">
+              <p className="text-sm text-muted-foreground">{labels.tenant}</p>
+              <p className="font-medium">
+                {selectedFlatTenant?.name || labels.noTenant}
+              </p>
+              {selectedFlatTenant?.email && (
+                <p className="text-sm text-muted-foreground">{selectedFlatTenant.email}</p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -184,11 +225,11 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
           </div>
 
           <div className="space-y-2">
-            <Label>{labels.description}</Label>
+            <Label>{labels.invoiceDescription}</Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={language === 'en' ? 'Monthly Service Charge' : 'মাসিক সার্ভিস চার্জ'}
+              placeholder={language === 'en' ? 'Monthly Rent / Service Charge' : 'মাসিক ভাড়া / সার্ভিস চার্জ'}
             />
           </div>
 
