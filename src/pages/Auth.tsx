@@ -44,7 +44,8 @@ const Auth = () => {
   // Get available flats for owner/tenant selection
   // Owners can select any flat (including rented ones they own)
   const availableFlatsForOwner = flats || [];
-  const availableFlatsForTenant = flats?.filter(f => f.status === 'owner-occupied' || f.status === 'tenant') || [];
+  // Tenants can select any flat number during signup (final assignment still depends on approvals/workflow)
+  const availableFlatsForTenant = flats || [];
 
   useEffect(() => {
     if (user) {
