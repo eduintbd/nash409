@@ -21,6 +21,7 @@ import { useCreateServiceRequest } from '@/hooks/useServiceRequests';
 import { useFlats } from '@/hooks/useFlats';
 import { useEmployees } from '@/hooks/useEmployees';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ServiceRequestFormProps {
   open: boolean;
@@ -29,9 +30,12 @@ interface ServiceRequestFormProps {
 
 export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormProps) => {
   const { language } = useLanguage();
+  const { isAdmin, isOwner, isTenant, userFlatId } = useAuth();
   const { data: flats } = useFlats();
   const { data: employees } = useEmployees();
   const createRequest = useCreateServiceRequest();
+  
+  const isResident = isOwner || isTenant;
   
   const [formData, setFormData] = useState({
     flat_id: '',
@@ -45,15 +49,17 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
   useEffect(() => {
     if (!open) {
       setFormData({
-        flat_id: '',
+        flat_id: isResident && userFlatId ? userFlatId : '',
         title: '',
         category: 'other',
         description: '',
         priority: 'medium',
         assigned_to: '',
       });
+    } else if (isResident && userFlatId) {
+      setFormData(prev => ({ ...prev, flat_id: userFlatId }));
     }
-  }, [open]);
+  }, [open, isResident, userFlatId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +71,7 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
       description: formData.description || null,
       status: 'open',
       priority: formData.priority,
-      assigned_to: formData.assigned_to || null,
+      assigned_to: isAdmin && formData.assigned_to ? formData.assigned_to : null,
       cost: null,
       resolved_at: null,
     });
@@ -114,21 +120,28 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="flat_id">{t.flat} *</Label>
-            <Select value={formData.flat_id} onValueChange={(v) => setFormData({ ...formData, flat_id: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder={t.flatPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {flats?.map(flat => (
-                  <SelectItem key={flat.id} value={flat.id}>
-                    {flat.flat_number}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isResident ? (
+            <div>
+              <Label htmlFor="flat_id">{t.flat} *</Label>
+              <Select value={formData.flat_id} onValueChange={(v) => setFormData({ ...formData, flat_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t.flatPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {flats?.map(flat => (
+                    <SelectItem key={flat.id} value={flat.id}>
+                      {flat.flat_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div>
+              <Label>{t.flat}</Label>
+              <Input value={flats?.find(f => f.id === userFlatId)?.flat_number || ''} disabled />
+            </div>
+          )}
           
           <div>
             <Label htmlFor="title">{t.requestTitle} *</Label>
@@ -180,19 +193,21 @@ export const ServiceRequestForm = ({ open, onOpenChange }: ServiceRequestFormPro
             />
           </div>
           
-          <div>
-            <Label htmlFor="assigned_to">{t.assignedTo}</Label>
-            <Select value={formData.assigned_to} onValueChange={(v) => setFormData({ ...formData, assigned_to: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder={t.assigneePlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {employees?.map(emp => (
-                  <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {isAdmin && (
+            <div>
+              <Label htmlFor="assigned_to">{t.assignedTo}</Label>
+              <Select value={formData.assigned_to} onValueChange={(v) => setFormData({ ...formData, assigned_to: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t.assigneePlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees?.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <div className="flex gap-2 justify-end pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

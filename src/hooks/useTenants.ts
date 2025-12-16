@@ -41,6 +41,15 @@ export const useCreateTenant = () => {
         .select()
         .single();
       if (error) throw error;
+      
+      // Auto-update flat status to 'tenant' when tenant is assigned
+      if (tenant.flat_id) {
+        await supabase
+          .from('flats')
+          .update({ status: 'tenant' })
+          .eq('id', tenant.flat_id);
+      }
+      
       return data;
     },
     onSuccess: () => {

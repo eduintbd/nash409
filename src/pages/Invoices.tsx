@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { useInvoices, useUpdateInvoice } from '@/hooks/useInvoices';
 import { useOwners } from '@/hooks/useOwners';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ const statusColors = {
 
 const Invoices = () => {
   const { t, language } = useLanguage();
+  const { isAdmin, isOwner, isTenant, userFlatId } = useAuth();
   const { data: invoices, isLoading } = useInvoices();
   const { data: owners } = useOwners();
   const updateInvoice = useUpdateInvoice();
@@ -51,11 +53,22 @@ const Invoices = () => {
     overdue: t.invoices.statusOverdue,
   };
 
-  const filteredInvoices = invoices?.filter(invoice => {
+  // Filter invoices based on role
+  const roleFilteredInvoices = invoices?.filter(invoice => {
+    // Admin sees all
+    if (isAdmin) return true;
+    // Owner/Tenant sees only their flat invoices
+    if ((isOwner || isTenant) && userFlatId) {
+      return invoice.flat_id === userFlatId;
+    }
+    return true; // Regular user sees all (can be restricted later)
+  }) || [];
+
+  const filteredInvoices = roleFilteredInvoices.filter(invoice => {
     const matchesSearch = (invoice as any).flats?.flat_number?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
     return matchesSearch && matchesStatus;
-  }) || [];
+  });
 
   const getOwner = (flatId: string) => owners?.find(o => o.flat_id === flatId);
 
@@ -63,8 +76,8 @@ const Invoices = () => {
     .filter(inv => inv.status !== 'paid')
     .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
-  const totalInvoices = invoices?.length || 0;
-  const paidCount = invoices?.filter(i => i.status === 'paid').length || 0;
+  const totalInvoices = roleFilteredInvoices.length;
+  const paidCount = roleFilteredInvoices.filter(i => i.status === 'paid').length;
   const collectionRate = totalInvoices > 0 ? Math.round((paidCount / totalInvoices) * 100) : 0;
 
   const handleRecordPayment = async (invoice: any) => {
@@ -125,16 +138,18 @@ const Invoices = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setManualFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {language === 'en' ? 'Add Invoice' : 'বিল যুক্ত করুন'}
-            </Button>
-            <Button onClick={() => setFormOpen(true)}>
-              <FileText className="h-4 w-4 mr-2" />
-              {t.invoices.generateInvoice}
-            </Button>
-          </div>
+          {isAdmin && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setManualFormOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                {language === 'en' ? 'Add Invoice' : 'বিল যুক্ত করুন'}
+              </Button>
+              <Button onClick={() => setFormOpen(true)}>
+                <FileText className="h-4 w-4 mr-2" />
+                {t.invoices.generateInvoice}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Invoices Table */}

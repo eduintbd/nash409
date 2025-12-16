@@ -7,29 +7,169 @@ import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { useEmployees } from '@/hooks/useEmployees';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Building2, Users, Receipt, Wrench, TrendingUp, TrendingDown } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Building2, Users, Receipt, Wrench, TrendingUp, TrendingDown, Home } from 'lucide-react';
 import { formatBDT } from '@/lib/currency';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Dashboard = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { isAdmin, isOwner, isTenant, userFlatId, userRole } = useAuth();
   const { data: flats, isLoading: loadingFlats } = useFlats();
   const { data: invoices, isLoading: loadingInvoices } = useInvoices();
   const { data: requests, isLoading: loadingRequests } = useServiceRequests();
   const { data: employees, isLoading: loadingEmployees } = useEmployees();
   const { data: expenses, isLoading: loadingExpenses } = useExpenses();
 
+  const isResident = isOwner || isTenant;
+
+  // Filter data based on role
+  const userInvoices = isResident && userFlatId 
+    ? invoices?.filter(i => i.flat_id === userFlatId) 
+    : invoices;
+  
+  const userRequests = isResident && userFlatId 
+    ? requests?.filter(r => r.flat_id === userFlatId) 
+    : requests;
+
+  const userFlat = flats?.find(f => f.id === userFlatId);
+
+  // Admin stats
   const occupiedFlats = flats?.filter(f => f.status !== 'vacant').length || 0;
-  const pendingPayments = invoices?.filter(inv => inv.status === 'unpaid' || inv.status === 'overdue').length || 0;
-  const openRequests = requests?.filter(req => req.status === 'open' || req.status === 'in-progress').length || 0;
+  const pendingPayments = userInvoices?.filter(inv => inv.status === 'unpaid' || inv.status === 'overdue').length || 0;
+  const openRequests = userRequests?.filter(req => req.status === 'open' || req.status === 'in-progress').length || 0;
 
   const totalIncome = invoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
   const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
-  const pendingAmount = invoices?.filter(i => i.status !== 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
+  const pendingAmount = userInvoices?.filter(i => i.status !== 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
 
   const isLoading = loadingFlats || loadingInvoices || loadingRequests || loadingEmployees || loadingExpenses;
 
+  // Resident Dashboard
+  if (isResident) {
+    return (
+      <MainLayout>
+        <Header 
+          title={language === 'bn' ? 'আমার ড্যাশবোর্ড' : 'My Dashboard'}
+          subtitle={isOwner 
+            ? (language === 'bn' ? 'ফ্ল্যাট মালিকের প্যানেল' : 'Flat Owner Panel')
+            : (language === 'bn' ? 'ভাড়াটিয়ার প্যানেল' : 'Tenant Panel')
+          }
+        />
+        
+        <div className="p-6 space-y-6 animate-fade-in">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+            </div>
+          ) : (
+            <>
+              {/* Flat Info */}
+              <Card className="stat-card border-0 bg-primary/5">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Home className="h-4 w-4 text-primary" />
+                    {language === 'bn' ? 'আমার ফ্ল্যাট' : 'My Flat'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-primary">{userFlat?.flat_number || '-'}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {language === 'bn' ? `তলা ${userFlat?.floor || '-'}` : `Floor ${userFlat?.floor || '-'}`} • {userFlat?.size || 0} sqft
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard
+                  title={language === 'bn' ? 'মোট বিল' : 'Total Invoices'}
+                  value={userInvoices?.length || 0}
+                  icon={Receipt}
+                  variant="primary"
+                />
+                <StatCard
+                  title={language === 'bn' ? 'বকেয়া বিল' : 'Pending Bills'}
+                  value={pendingPayments}
+                  icon={Receipt}
+                  variant="warning"
+                />
+                <StatCard
+                  title={language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'}
+                  value={openRequests}
+                  icon={Wrench}
+                  variant="destructive"
+                />
+              </div>
+
+              {/* Financial Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="stat-card border-0 bg-success/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-success" />
+                      {language === 'bn' ? 'পরিশোধিত' : 'Total Paid'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-success">
+                      {formatBDT(userInvoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0)}
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="stat-card border-0 bg-warning/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-warning" />
+                      {language === 'bn' ? 'বকেয়া টাকা' : 'Pending Amount'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {language === 'bn' ? 'বিল বকেয়া' : 'invoices pending'}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Requests */}
+              <Card className="stat-card border-0">
+                <CardHeader>
+                  <CardTitle className="text-lg">{language === 'bn' ? 'আমার সার্ভিস অনুরোধ' : 'My Service Requests'}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {userRequests?.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">{language === 'bn' ? 'কোনো অনুরোধ নেই' : 'No service requests'}</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {userRequests?.slice(0, 5).map(request => (
+                        <div key={request.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div>
+                            <p className="font-medium text-sm">{request.title}</p>
+                            <p className="text-xs text-muted-foreground">{request.category}</p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            request.status === 'open' ? 'bg-warning/10 text-warning' :
+                            request.status === 'in-progress' ? 'bg-primary/10 text-primary' :
+                            'bg-success/10 text-success'
+                          }`}>
+                            {request.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Admin/Staff Dashboard
   return (
     <MainLayout>
       <Header 
