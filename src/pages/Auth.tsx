@@ -42,7 +42,8 @@ const Auth = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get available flats for owner/tenant selection
-  const availableFlatsForOwner = flats?.filter(f => f.status === 'vacant') || [];
+  // Owners can select any flat (including rented ones they own)
+  const availableFlatsForOwner = flats || [];
   const availableFlatsForTenant = flats?.filter(f => f.status === 'owner-occupied' || f.status === 'vacant') || [];
 
   useEffect(() => {

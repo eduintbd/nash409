@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   UserCheck,
+  UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -35,10 +36,11 @@ export function Sidebar() {
     { name: language === 'bn' ? 'ব্যবহারকারী অনুমোদন' : 'User Approvals', href: '/user-approvals', icon: UserCheck },
   ];
 
-  // Limited navigation for owners (can see building expenses + flats)
+  // Limited navigation for owners (can see building expenses + flats + manage tenant)
   const ownerNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
+    { name: language === 'bn' ? 'আমার ভাড়াটিয়া' : 'My Tenant', href: '/my-tenant', icon: UserPlus },
     { name: t.nav.invoices, href: '/invoices', icon: Receipt },
     { name: t.nav.expenses, href: '/expenses', icon: Wallet },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },

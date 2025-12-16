@@ -18,6 +18,7 @@ import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import PendingApproval from "./pages/PendingApproval";
 import UserApprovals from "./pages/UserApprovals";
+import MyTenant from "./pages/MyTenant";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/user-approvals" element={<UserApprovals />} />
               <Route path="/flats" element={<Flats />} />
+              <Route path="/my-tenant" element={<MyTenant />} />
               <Route path="/residents" element={<Residents />} />
               <Route path="/employees" element={<Employees />} />
               <Route path="/invoices" element={<Invoices />} />
