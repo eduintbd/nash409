@@ -40,6 +40,15 @@ export const useCreateOwner = () => {
         .select()
         .single();
       if (error) throw error;
+      
+      // Auto-update flat status to 'owner-occupied' when owner is assigned
+      if (owner.flat_id) {
+        await supabase
+          .from('flats')
+          .update({ status: 'owner-occupied' })
+          .eq('id', owner.flat_id);
+      }
+      
       return data;
     },
     onSuccess: () => {

@@ -14,11 +14,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function Sidebar() {
   const { t } = useLanguage();
+  const { isAdmin, isOwner, isTenant, userRole, user } = useAuth();
 
-  const navigation = [
+  // Full navigation for admin
+  const adminNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
     { name: t.nav.residents, href: '/residents', icon: Users },
@@ -29,6 +32,29 @@ export function Sidebar() {
     { name: t.nav.cameras, href: '/cameras', icon: Camera },
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
   ];
+
+  // Limited navigation for owners/tenants
+  const residentNavigation = [
+    { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
+    { name: t.nav.invoices, href: '/invoices', icon: Receipt },
+    { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
+  ];
+
+  const navigation = (isAdmin || userRole === 'user') ? adminNavigation : residentNavigation;
+
+  const getRoleLabel = () => {
+    if (isAdmin) return 'Admin';
+    if (isOwner) return 'Flat Owner';
+    if (isTenant) return 'Tenant';
+    return 'User';
+  };
+
+  const getUserInitials = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    return user?.email?.slice(0, 2).toUpperCase() || 'U';
+  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
@@ -80,11 +106,13 @@ export function Sidebar() {
         <div className="border-t border-sidebar-border p-4">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-              <span className="text-sm font-medium text-sidebar-foreground">AD</span>
+              <span className="text-sm font-medium text-sidebar-foreground">{getUserInitials()}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">Admin User</p>
-              <p className="text-xs text-sidebar-muted truncate">Committee Member</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {user?.user_metadata?.full_name || user?.email || 'User'}
+              </p>
+              <p className="text-xs text-sidebar-muted truncate">{getRoleLabel()}</p>
             </div>
           </div>
         </div>

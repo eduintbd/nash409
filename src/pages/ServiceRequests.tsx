@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { useServiceRequests, useUpdateServiceRequest, useDeleteServiceRequest } from '@/hooks/useServiceRequests';
 import { useOwners } from '@/hooks/useOwners';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,7 @@ import {
 
 const ServiceRequests = () => {
   const { t, language } = useLanguage();
+  const { isAdmin, isOwner, isTenant, userFlatId } = useAuth();
   const { data: requests, isLoading } = useServiceRequests();
   const { data: owners } = useOwners();
   const updateRequest = useUpdateServiceRequest();
@@ -63,17 +65,28 @@ const ServiceRequests = () => {
     other: t.serviceRequests.catOther,
   };
 
-  const filteredRequests = requests?.filter(request => {
+  // Filter requests based on role
+  const roleFilteredRequests = requests?.filter(request => {
+    // Admin sees all
+    if (isAdmin) return true;
+    // Owner/Tenant sees only their flat requests
+    if ((isOwner || isTenant) && userFlatId) {
+      return request.flat_id === userFlatId;
+    }
+    return true;
+  }) || [];
+
+  const filteredRequests = roleFilteredRequests.filter(request => {
     const matchesSearch = request.title.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     return matchesSearch && matchesStatus;
-  }) || [];
+  });
 
   const getOwner = (flatId: string) => owners?.find(o => o.flat_id === flatId);
 
-  const openCount = requests?.filter(r => r.status === 'open').length || 0;
-  const inProgressCount = requests?.filter(r => r.status === 'in-progress').length || 0;
-  const resolvedCount = requests?.filter(r => r.status === 'resolved' || r.status === 'closed').length || 0;
+  const openCount = roleFilteredRequests.filter(r => r.status === 'open').length;
+  const inProgressCount = roleFilteredRequests.filter(r => r.status === 'in-progress').length;
+  const resolvedCount = roleFilteredRequests.filter(r => r.status === 'resolved' || r.status === 'closed').length;
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     const updates: any = { id, status: newStatus };
@@ -116,7 +129,7 @@ const ServiceRequests = () => {
           </div>
           <div className="stat-card">
             <p className="text-sm text-muted-foreground">{t.serviceRequests.total}</p>
-            <p className="text-2xl font-bold mt-1">{requests?.length || 0}</p>
+            <p className="text-2xl font-bold mt-1">{roleFilteredRequests.length}</p>
           </div>
         </div>
 
@@ -182,9 +195,11 @@ const ServiceRequests = () => {
                           </CardDescription>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(request.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(request.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -203,7 +218,7 @@ const ServiceRequests = () => {
                       <Badge variant="outline">{categoryLabels[request.category] || request.category}</Badge>
                     </div>
                     
-                    {request.status !== 'closed' && (
+                    {isAdmin && request.status !== 'closed' && (
                       <div className="pt-2 border-t">
                         <Select 
                           value={request.status} 

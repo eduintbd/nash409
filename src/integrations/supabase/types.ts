@@ -243,6 +243,7 @@ export type Database = {
           ownership_start: string
           phone: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -255,6 +256,7 @@ export type Database = {
           ownership_start?: string
           phone: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -267,6 +269,7 @@ export type Database = {
           ownership_start?: string
           phone?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -423,6 +426,7 @@ export type Database = {
           rent_amount: number
           start_date: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -436,6 +440,7 @@ export type Database = {
           rent_amount: number
           start_date?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -449,6 +454,7 @@ export type Database = {
           rent_amount?: number
           start_date?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -495,7 +501,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "owner" | "tenant"
       camera_status: "online" | "offline"
       employee_role: "guard" | "cleaner" | "caretaker" | "other"
       flat_status: "owner-occupied" | "tenant" | "vacant"
@@ -636,7 +642,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "owner", "tenant"],
       camera_status: ["online", "offline"],
       employee_role: ["guard", "cleaner", "caretaker", "other"],
       flat_status: ["owner-occupied", "tenant", "vacant"],
