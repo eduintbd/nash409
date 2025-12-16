@@ -122,10 +122,15 @@ export const useUpdateOwner = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, flat_ids, flat_occupancy, ...updates }: Partial<Owner> & { 
+    mutationFn: async ({ id, flat_ids, flat_occupancy, new_property, ...updates }: Partial<Owner> & { 
       id: string; 
       flat_ids?: string[];
       flat_occupancy?: Record<string, 'owner-occupied' | 'for-rent'>;
+      new_property?: {
+        flat_number: string;
+        floor: number;
+        building_name: string;
+      } | null;
     }) => {
       const { data, error } = await supabase
         .from('owners')
