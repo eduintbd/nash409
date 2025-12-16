@@ -188,6 +188,7 @@ const Flats = () => {
                   <TableHead>{t.flats.size}</TableHead>
                   <TableHead>{t.common.status}</TableHead>
                   <TableHead>{t.flats.owner}</TableHead>
+                  <TableHead>{language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant'}</TableHead>
                   <TableHead>{t.flats.contact}</TableHead>
                   <TableHead>{t.flats.parking}</TableHead>
                   <TableHead className="text-right">{t.common.actions}</TableHead>
@@ -196,8 +197,9 @@ const Flats = () => {
               <TableBody>
                 {filteredFlats.map((flat) => {
                   const owner = getOwner(flat.id);
-                  const tenant = flat.status === 'tenant' ? getTenant(flat.id) : null;
-                  const displayPerson = tenant || owner;
+                  const tenant = getTenant(flat.id);
+                  // Contact person: show tenant contact if rented, otherwise owner
+                  const contactPerson = flat.status === 'tenant' && tenant ? tenant : owner;
 
                   return (
                     <TableRow key={flat.id} className="table-row-hover">
@@ -209,16 +211,19 @@ const Flats = () => {
                           {statusLabels[flat.status]}
                         </Badge>
                       </TableCell>
-                      <TableCell>{displayPerson?.name || '-'}</TableCell>
+                      <TableCell>{owner?.name || '-'}</TableCell>
+                      <TableCell>{tenant?.name || '-'}</TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {displayPerson?.phone || '-'}
+                        {contactPerson?.phone || '-'}
                       </TableCell>
                       <TableCell>
                         {flat.parking_spot ? (
                           <span className="flex items-center gap-1 text-sm">
                             <Car className="h-3 w-3" /> {flat.parking_spot}
                           </span>
-                        ) : '-'}
+                        ) : (
+                          <span className="text-muted-foreground">N/A</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
