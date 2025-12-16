@@ -3,11 +3,16 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useServiceRequests, useUpdateServiceRequest, useDeleteServiceRequest } from '@/hooks/useServiceRequests';
 import { useOwners } from '@/hooks/useOwners';
+import { useFlats } from '@/hooks/useFlats';
+import { useCreateInvoice } from '@/hooks/useInvoices';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -16,8 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ServiceRequestForm } from '@/components/forms/ServiceRequestForm';
-import { Search, Plus, AlertCircle, Clock, CheckCircle, Building2, Trash2 } from 'lucide-react';
+import { Search, Plus, AlertCircle, Clock, CheckCircle, Building2, Trash2, Ticket, Receipt } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -29,19 +42,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { formatBDT } from '@/lib/currency';
 
 const ServiceRequests = () => {
   const { t, language } = useLanguage();
   const { isAdmin, isOwner, isTenant, userFlatId } = useAuth();
   const { data: requests, isLoading } = useServiceRequests();
   const { data: owners } = useOwners();
+  const { data: flats } = useFlats();
   const updateRequest = useUpdateServiceRequest();
   const deleteRequest = useDeleteServiceRequest();
+  const createInvoice = useCreateInvoice();
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  
+  // Close dialog state
+  const [closeDialog, setCloseDialog] = useState<{ open: boolean; request: any | null }>({ open: false, request: null });
+  const [resolutionNotes, setResolutionNotes] = useState('');
+  const [createInvoiceForRequest, setCreateInvoiceForRequest] = useState(false);
+  const [invoiceCost, setInvoiceCost] = useState('');
 
   const statusConfig = {
     open: { icon: AlertCircle, color: 'bg-warning/10 text-warning border-warning/20', label: t.serviceRequests.open },
@@ -77,7 +99,8 @@ const ServiceRequests = () => {
   }) || [];
 
   const filteredRequests = roleFilteredRequests.filter(request => {
-    const matchesSearch = request.title.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = request.title.toLowerCase().includes(search.toLowerCase()) || 
+                          `TKT-${request.ticket_number}`.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -88,12 +111,57 @@ const ServiceRequests = () => {
   const inProgressCount = roleFilteredRequests.filter(r => r.status === 'in-progress').length;
   const resolvedCount = roleFilteredRequests.filter(r => r.status === 'resolved' || r.status === 'closed').length;
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
+  const handleStatusChange = async (id: string, newStatus: string, request?: any) => {
+    // If closing, open the close dialog
+    if (newStatus === 'closed' && isAdmin && request) {
+      setCloseDialog({ open: true, request });
+      setResolutionNotes('');
+      setCreateInvoiceForRequest(false);
+      setInvoiceCost(request.cost?.toString() || '');
+      return;
+    }
+    
     const updates: any = { id, status: newStatus };
     if (newStatus === 'resolved') {
       updates.resolved_at = new Date().toISOString();
     }
     await updateRequest.mutateAsync(updates);
+  };
+
+  const handleCloseRequest = async () => {
+    if (!closeDialog.request) return;
+    
+    const request = closeDialog.request;
+    let invoiceId: string | null = null;
+    
+    // Create invoice if requested
+    if (createInvoiceForRequest && invoiceCost) {
+      const currentDate = new Date();
+      const flat = flats?.find(f => f.id === request.flat_id);
+      
+      const invoice = await createInvoice.mutateAsync({
+        flat_id: request.flat_id,
+        amount: parseFloat(invoiceCost),
+        month: currentDate.toLocaleString('default', { month: 'long' }),
+        year: currentDate.getFullYear(),
+        due_date: new Date(currentDate.setDate(currentDate.getDate() + 15)).toISOString().split('T')[0],
+        status: 'unpaid',
+        paid_date: null,
+        description: `Service Request TKT-${request.ticket_number}: ${request.title}`,
+      });
+      invoiceId = invoice.id;
+    }
+    
+    // Update service request
+    await updateRequest.mutateAsync({
+      id: request.id,
+      status: 'closed',
+      resolution_notes: resolutionNotes || null,
+      invoice_id: invoiceId,
+      cost: invoiceCost ? parseFloat(invoiceCost) : request.cost,
+    });
+    
+    setCloseDialog({ open: false, request: null });
   };
 
   const handleDelete = async () => {
@@ -188,7 +256,13 @@ const ServiceRequests = () => {
                           <StatusIcon className="h-4 w-4" />
                         </div>
                         <div>
-                          <CardTitle className="text-base leading-tight">{request.title}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs font-mono">
+                              <Ticket className="h-3 w-3 mr-1" />
+                              TKT-{request.ticket_number}
+                            </Badge>
+                          </div>
+                          <CardTitle className="text-base leading-tight mt-1">{request.title}</CardTitle>
                           <CardDescription className="flex items-center gap-1 mt-1">
                             <Building2 className="h-3 w-3" />
                             {request.flats?.flat_number} • {owner?.name || (language === 'bn' ? 'অজানা' : 'Unknown')}
@@ -206,6 +280,24 @@ const ServiceRequests = () => {
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {request.description || t.serviceRequests.noDescription}
                     </p>
+                    
+                    {/* Show resolution notes for closed requests */}
+                    {request.status === 'closed' && request.resolution_notes && (
+                      <div className="p-2 bg-muted/50 rounded-md text-sm">
+                        <span className="font-medium">{language === 'bn' ? 'মন্তব্য:' : 'Resolution:'}</span>{' '}
+                        {request.resolution_notes}
+                      </div>
+                    )}
+                    
+                    {/* Show invoice link if created */}
+                    {request.invoice_id && (
+                      <div className="flex items-center gap-2 text-sm text-primary">
+                        <Receipt className="h-4 w-4" />
+                        {language === 'bn' ? 'চালান তৈরি করা হয়েছে' : 'Invoice created'}
+                        {request.cost && ` - ${formatBDT(request.cost)}`}
+                      </div>
+                    )}
+                    
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={statusConfig[request.status as keyof typeof statusConfig]?.color}>
@@ -222,7 +314,7 @@ const ServiceRequests = () => {
                       <div className="pt-2 border-t">
                         <Select 
                           value={request.status} 
-                          onValueChange={(v) => handleStatusChange(request.id, v)}
+                          onValueChange={(v) => handleStatusChange(request.id, v, request)}
                         >
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue />
@@ -263,6 +355,74 @@ const ServiceRequests = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Close Request Dialog */}
+      <Dialog open={closeDialog.open} onOpenChange={(open) => setCloseDialog({ open, request: open ? closeDialog.request : null })}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'bn' ? 'টিকেট বন্ধ করুন' : 'Close Ticket'}
+            </DialogTitle>
+            <DialogDescription>
+              {closeDialog.request && (
+                <span className="font-mono">TKT-{closeDialog.request.ticket_number}</span>
+              )}
+              {' - '}
+              {language === 'bn' 
+                ? 'সমাধানের মন্তব্য যোগ করুন এবং প্রয়োজনে চালান তৈরি করুন।' 
+                : 'Add resolution notes and create an invoice if needed.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>{language === 'bn' ? 'সমাধানের মন্তব্য' : 'Resolution Notes'}</Label>
+              <Textarea
+                placeholder={language === 'bn' ? 'কাজ সম্পন্ন হওয়ার বিবরণ লিখুন...' : 'Describe how the issue was resolved...'}
+                value={resolutionNotes}
+                onChange={(e) => setResolutionNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="createInvoice"
+                checked={createInvoiceForRequest}
+                onCheckedChange={(checked) => setCreateInvoiceForRequest(checked as boolean)}
+              />
+              <Label htmlFor="createInvoice" className="text-sm font-normal cursor-pointer">
+                {language === 'bn' ? 'এই টিকেটের জন্য চালান তৈরি করুন' : 'Create invoice for this ticket'}
+              </Label>
+            </div>
+            
+            {createInvoiceForRequest && (
+              <div className="space-y-2 pl-6">
+                <Label>{language === 'bn' ? 'খরচ' : 'Cost'}</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">৳</span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={invoiceCost}
+                    onChange={(e) => setInvoiceCost(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloseDialog({ open: false, request: null })}>
+              {t.common.cancel}
+            </Button>
+            <Button onClick={handleCloseRequest} disabled={updateRequest.isPending || createInvoice.isPending}>
+              {language === 'bn' ? 'টিকেট বন্ধ করুন' : 'Close Ticket'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
