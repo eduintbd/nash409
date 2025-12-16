@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { useCreateTenant, useUpdateTenant } from '@/hooks/useTenants';
 import { useFlats } from '@/hooks/useFlats';
+import { useOwners } from '@/hooks/useOwners';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TenantFormProps {
@@ -39,6 +40,7 @@ interface TenantFormProps {
 export const TenantForm = ({ open, onOpenChange, editData }: TenantFormProps) => {
   const { language } = useLanguage();
   const { data: flats } = useFlats();
+  const { data: owners } = useOwners();
   const createTenant = useCreateTenant();
   const updateTenant = useUpdateTenant();
   
@@ -104,6 +106,12 @@ export const TenantForm = ({ open, onOpenChange, editData }: TenantFormProps) =>
 
   const availableFlats = flats?.filter(f => f.status !== 'tenant' || f.id === editData?.flat_id) || [];
 
+  // Find owner name for selected flat
+  const selectedFlatOwner = useMemo(() => {
+    if (!formData.flat_id || !owners) return null;
+    return owners.find(owner => owner.flat_id === formData.flat_id);
+  }, [formData.flat_id, owners]);
+
   const t = {
     title: editData 
       ? (language === 'bn' ? 'ভাড়াটিয়া সম্পাদনা' : 'Edit Tenant')
@@ -113,6 +121,8 @@ export const TenantForm = ({ open, onOpenChange, editData }: TenantFormProps) =>
     namePlaceholder: language === 'bn' ? 'ভাড়াটিয়ার নাম' : 'Tenant name',
     flat: language === 'bn' ? 'ফ্ল্যাট' : 'Flat',
     flatPlaceholder: language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Select flat',
+    flatOwner: language === 'bn' ? 'ফ্ল্যাট মালিক' : 'Flat Owner',
+    noOwner: language === 'bn' ? 'কোনো মালিক নেই' : 'No owner assigned',
     phone: language === 'bn' ? 'ফোন নম্বর' : 'Phone Number',
     rentAmount: language === 'bn' ? 'ভাড়ার পরিমাণ (৳)' : 'Rent Amount (৳)',
     email: language === 'bn' ? 'ইমেইল' : 'Email',
@@ -162,6 +172,17 @@ export const TenantForm = ({ open, onOpenChange, editData }: TenantFormProps) =>
               </SelectContent>
             </Select>
           </div>
+
+          {formData.flat_id && (
+            <div>
+              <Label>{t.flatOwner}</Label>
+              <Input
+                value={selectedFlatOwner?.name || t.noOwner}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          )}
           
           <div>
             <Label htmlFor="phone">{t.phone} *</Label>
