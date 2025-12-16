@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
 
 interface HeaderProps {
   title: string;
@@ -26,8 +27,16 @@ export function Header({ title, subtitle }: HeaderProps) {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
+    try {
+      await signOut();
+      navigate('/auth', { replace: true });
+    } catch (err: any) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: err?.message || (language === 'bn' ? 'লগআউট ব্যর্থ' : 'Logout failed'),
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -84,7 +93,12 @@ export function Header({ title, subtitle }: HeaderProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
+              <DropdownMenuItem
+                onSelect={() => {
+                  void handleSignOut();
+                }}
+                className="text-destructive cursor-pointer"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 {language === 'bn' ? 'লগআউট' : 'Logout'}
               </DropdownMenuItem>
