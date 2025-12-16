@@ -33,14 +33,26 @@ export function Sidebar() {
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
   ];
 
-  // Limited navigation for owners/tenants
-  const residentNavigation = [
+  // Limited navigation for owners (can see building expenses)
+  const ownerNavigation = [
+    { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
+    { name: t.nav.invoices, href: '/invoices', icon: Receipt },
+    { name: t.nav.expenses, href: '/expenses', icon: Wallet },
+    { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
+  ];
+
+  // Minimal navigation for tenants (only their stuff)
+  const tenantNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
     { name: t.nav.invoices, href: '/invoices', icon: Receipt },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
   ];
 
-  const navigation = (isAdmin || userRole === 'user') ? adminNavigation : residentNavigation;
+  const navigation = isAdmin || userRole === 'user' 
+    ? adminNavigation 
+    : isOwner 
+      ? ownerNavigation 
+      : tenantNavigation;
 
   const getRoleLabel = () => {
     if (isAdmin) return 'Admin';

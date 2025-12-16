@@ -46,16 +46,114 @@ const Dashboard = () => {
 
   const isLoading = loadingFlats || loadingInvoices || loadingRequests || loadingEmployees || loadingExpenses;
 
-  // Resident Dashboard
-  if (isResident) {
+  // Tenant Dashboard - minimal view
+  if (isTenant) {
     return (
       <MainLayout>
         <Header 
           title={language === 'bn' ? 'আমার ড্যাশবোর্ড' : 'My Dashboard'}
-          subtitle={isOwner 
-            ? (language === 'bn' ? 'ফ্ল্যাট মালিকের প্যানেল' : 'Flat Owner Panel')
-            : (language === 'bn' ? 'ভাড়াটিয়ার প্যানেল' : 'Tenant Panel')
-          }
+          subtitle={language === 'bn' ? 'ভাড়াটিয়ার প্যানেল' : 'Tenant Panel'}
+        />
+        
+        <div className="p-6 space-y-6 animate-fade-in">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+            </div>
+          ) : (
+            <>
+              {/* Flat Info */}
+              <Card className="stat-card border-0 bg-primary/5">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Home className="h-4 w-4 text-primary" />
+                    {language === 'bn' ? 'আমার ফ্ল্যাট' : 'My Flat'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-primary">{userFlat?.flat_number || '-'}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {language === 'bn' ? `তলা ${userFlat?.floor || '-'}` : `Floor ${userFlat?.floor || '-'}`} • {userFlat?.size || 0} sqft
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Payment Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="stat-card border-0 bg-warning/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-warning" />
+                      {language === 'bn' ? 'বকেয়া টাকা' : 'Pending Amount'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {language === 'bn' ? 'বিল বকেয়া' : 'bills pending'}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="stat-card border-0 bg-success/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-success" />
+                      {language === 'bn' ? 'পরিশোধিত' : 'Total Paid'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-success">
+                      {formatBDT(userInvoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0)}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Service Requests */}
+              <Card className="stat-card border-0">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Wrench className="h-5 w-5" />
+                    {language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'} ({openRequests} {language === 'bn' ? 'চলমান' : 'open'})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {userRequests?.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">{language === 'bn' ? 'কোনো অনুরোধ নেই' : 'No service requests'}</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {userRequests?.slice(0, 5).map(request => (
+                        <div key={request.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div>
+                            <p className="font-medium text-sm">{request.title}</p>
+                            <p className="text-xs text-muted-foreground">{request.category}</p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            request.status === 'open' ? 'bg-warning/10 text-warning' :
+                            request.status === 'in-progress' ? 'bg-primary/10 text-primary' :
+                            'bg-success/10 text-success'
+                          }`}>
+                            {request.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Owner Dashboard - with income/expense overview
+  if (isOwner) {
+    return (
+      <MainLayout>
+        <Header 
+          title={language === 'bn' ? 'আমার ড্যাশবোর্ড' : 'My Dashboard'}
+          subtitle={language === 'bn' ? 'ফ্ল্যাট মালিকের প্যানেল' : 'Flat Owner Panel'}
         />
         
         <div className="p-6 space-y-6 animate-fade-in">
@@ -81,19 +179,61 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Stats Grid */}
+              {/* Building Financial Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="stat-card border-0 bg-success/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-success" />
+                      {language === 'bn' ? 'বিল্ডিং আয়' : 'Building Income'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-success">{formatBDT(totalIncome)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'পরিশোধিত বিল থেকে' : 'From paid invoices'}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="stat-card border-0 bg-destructive/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                      {language === 'bn' ? 'বিল্ডিং খরচ' : 'Building Expenses'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'মোট খরচ' : 'Total expenses'}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="stat-card border-0 bg-warning/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-warning" />
+                      {language === 'bn' ? 'আমার বকেয়া' : 'My Pending'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {language === 'bn' ? 'বিল বকেয়া' : 'bills pending'}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* My Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard
-                  title={language === 'bn' ? 'মোট বিল' : 'Total Invoices'}
+                  title={language === 'bn' ? 'আমার বিল' : 'My Invoices'}
                   value={userInvoices?.length || 0}
                   icon={Receipt}
                   variant="primary"
                 />
                 <StatCard
-                  title={language === 'bn' ? 'বকেয়া বিল' : 'Pending Bills'}
-                  value={pendingPayments}
+                  title={language === 'bn' ? 'পরিশোধিত' : 'Paid'}
+                  value={userInvoices?.filter(i => i.status === 'paid').length || 0}
                   icon={Receipt}
-                  variant="warning"
+                  variant="success"
                 />
                 <StatCard
                   title={language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'}
@@ -103,37 +243,7 @@ const Dashboard = () => {
                 />
               </div>
 
-              {/* Financial Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="stat-card border-0 bg-success/5">
-                  <CardHeader className="pb-2">
-                    <CardDescription className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-success" />
-                      {language === 'bn' ? 'পরিশোধিত' : 'Total Paid'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold text-success">
-                      {formatBDT(userInvoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0)}
-                    </p>
-                  </CardContent>
-                </Card>
-                
-                <Card className="stat-card border-0 bg-warning/5">
-                  <CardHeader className="pb-2">
-                    <CardDescription className="flex items-center gap-2">
-                      <Receipt className="h-4 w-4 text-warning" />
-                      {language === 'bn' ? 'বকেয়া টাকা' : 'Pending Amount'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {language === 'bn' ? 'বিল বকেয়া' : 'invoices pending'}</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Recent Requests */}
+              {/* Service Requests */}
               <Card className="stat-card border-0">
                 <CardHeader>
                   <CardTitle className="text-lg">{language === 'bn' ? 'আমার সার্ভিস অনুরোধ' : 'My Service Requests'}</CardTitle>
