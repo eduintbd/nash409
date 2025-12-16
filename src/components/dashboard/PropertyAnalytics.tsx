@@ -21,7 +21,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Building2, Home, Users, TrendingUp, Pencil, Trash2 } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Building2, Home, Users, TrendingUp, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +54,7 @@ interface BuildingStats {
   vacant: number;
   occupancyRate: number;
   flatIds: string[];
+  flatNumbers: string[];
 }
 
 export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
@@ -58,7 +64,9 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
   
   const [editProperty, setEditProperty] = useState<BuildingStats | null>(null);
   const [newPropertyName, setNewPropertyName] = useState('');
+  const [newTotalUnits, setNewTotalUnits] = useState<number>(0);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
 
   const t = {
     title: language === 'bn' ? 'সম্পত্তি বিশ্লেষণ' : 'Property Analytics',
@@ -78,11 +86,13 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
     status: language === 'bn' ? 'স্থিতি' : 'Status',
     actions: language === 'bn' ? 'অ্যাকশন' : 'Actions',
     editProperty: language === 'bn' ? 'প্রপার্টি সম্পাদনা' : 'Edit Property',
-    editPropertyDesc: language === 'bn' ? 'প্রপার্টির নাম পরিবর্তন করুন' : 'Change the property name',
+    editPropertyDesc: language === 'bn' ? 'প্রপার্টির তথ্য পরিবর্তন করুন' : 'Update property details',
     save: language === 'bn' ? 'সংরক্ষণ করুন' : 'Save',
     cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
     updateSuccess: language === 'bn' ? 'প্রপার্টি আপডেট হয়েছে' : 'Property updated',
     updateError: language === 'bn' ? 'আপডেট করতে সমস্যা হয়েছে' : 'Failed to update',
+    flatNumbers: language === 'bn' ? 'ফ্ল্যাট নম্বর' : 'Flat Numbers',
+    clickToExpand: language === 'bn' ? 'বিস্তারিত দেখতে ক্লিক করুন' : 'Click to expand',
   };
 
   const analytics = useMemo(() => {
@@ -113,6 +123,7 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
         vacant,
         occupancyRate,
         flatIds: buildingFlats.map(f => f.id),
+        flatNumbers: buildingFlats.map(f => f.flat_number).sort(),
       };
     }).sort((a, b) => b.totalFlats - a.totalFlats);
 
@@ -145,6 +156,7 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
   const handleEditProperty = (building: BuildingStats) => {
     setEditProperty(building);
     setNewPropertyName(building.name === t.unassigned ? '' : building.name);
+    setNewTotalUnits(building.totalFlats);
   };
 
   const handleUpdateProperty = async () => {
@@ -152,23 +164,67 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
     
     setIsUpdating(true);
     try {
-      // Update all flats with this building name
-      const { error } = await supabase
+      // Update existing flats with new building name
+      const { error: updateError } = await supabase
         .from('flats')
         .update({ building_name: newPropertyName.trim() })
         .in('id', editProperty.flatIds);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // If total units increased, add new flats
+      if (newTotalUnits > editProperty.totalFlats) {
+        const flatsToAdd = newTotalUnits - editProperty.totalFlats;
+        const existingNumbers = editProperty.flatNumbers.map(n => parseInt(n.replace(/\D/g, '')) || 0);
+        const maxNumber = Math.max(...existingNumbers, 0);
+        
+        const newFlats = [];
+        for (let i = 1; i <= flatsToAdd; i++) {
+          const newNumber = maxNumber + i;
+          newFlats.push({
+            flat_number: `${newNumber}`,
+            building_name: newPropertyName.trim(),
+            floor: Math.ceil(newNumber / 4),
+            size: 1200,
+            status: 'vacant' as const,
+          });
+        }
+        
+        const { error: insertError } = await supabase.from('flats').insert(newFlats);
+        if (insertError) throw insertError;
+      }
+      
+      // If total units decreased, remove vacant flats only
+      if (newTotalUnits < editProperty.totalFlats) {
+        const flatsToRemove = editProperty.totalFlats - newTotalUnits;
+        // Get only vacant flat IDs from this building
+        const { data: vacantFlats } = await supabase
+          .from('flats')
+          .select('id')
+          .eq('building_name', editProperty.name)
+          .eq('status', 'vacant')
+          .limit(flatsToRemove);
+        
+        if (vacantFlats && vacantFlats.length > 0) {
+          const idsToDelete = vacantFlats.map(f => f.id);
+          await supabase.from('flats').delete().in('id', idsToDelete);
+        }
+      }
 
       toast({ title: t.updateSuccess });
       queryClient.invalidateQueries({ queryKey: ['flats'] });
       setEditProperty(null);
       setNewPropertyName('');
+      setNewTotalUnits(0);
     } catch (error: any) {
       toast({ title: t.updateError, description: error.message, variant: 'destructive' });
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const toggleExpanded = (propertyName: string) => {
+    setExpandedProperty(expandedProperty === propertyName ? null : propertyName);
   };
 
   return (
@@ -243,46 +299,80 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
             </TableHeader>
             <TableBody>
               {analytics.buildingStats.map((building) => (
-                <TableRow key={building.name}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{building.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center font-semibold">{building.totalFlats}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                      {building.ownerOccupied}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                      {building.tenantOccupied}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="outline" className="bg-muted text-muted-foreground">
-                      {building.vacant}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="outline" className={getOccupancyBadge(building.occupancyRate)}>
-                      {building.occupancyRate.toFixed(0)}%
-                    </Badge>
-                  </TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditProperty(building)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                <Collapsible key={building.name} open={expandedProperty === building.name}>
+                  <TableRow className="group">
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{building.name}</span>
+                      </div>
                     </TableCell>
-                  )}
-                </TableRow>
+                    <TableCell className="text-center">
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="font-semibold gap-1 hover:bg-primary/10"
+                          onClick={() => toggleExpanded(building.name)}
+                        >
+                          {building.totalFlats}
+                          {expandedProperty === building.name ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                        {building.ownerOccupied}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                        {building.tenantOccupied}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="bg-muted text-muted-foreground">
+                        {building.vacant}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className={getOccupancyBadge(building.occupancyRate)}>
+                        {building.occupancyRate.toFixed(0)}%
+                      </Badge>
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditProperty(building)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                  <CollapsibleContent asChild>
+                    <TableRow className="bg-muted/30">
+                      <TableCell colSpan={isAdmin ? 7 : 6} className="py-3">
+                        <div className="pl-6">
+                          <p className="text-sm font-medium text-muted-foreground mb-2">{t.flatNumbers}:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {building.flatNumbers.map((flatNum) => (
+                              <Badge key={flatNum} variant="secondary" className="text-xs">
+                                {flatNum}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </CollapsibleContent>
+                </Collapsible>
               ))}
             </TableBody>
           </Table>
@@ -351,11 +441,41 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
                 placeholder={language === 'bn' ? 'প্রপার্টির নাম লিখুন' : 'Enter property name'}
               />
             </div>
+            <div>
+              <Label htmlFor="totalUnits">{t.totalUnits}</Label>
+              <Input
+                id="totalUnits"
+                type="number"
+                min={1}
+                max={100}
+                value={newTotalUnits}
+                onChange={(e) => setNewTotalUnits(parseInt(e.target.value) || 0)}
+              />
+              {editProperty && newTotalUnits < editProperty.totalFlats && (
+                <p className="text-xs text-warning mt-1">
+                  {language === 'bn' 
+                    ? 'শুধুমাত্র খালি ফ্ল্যাট মুছে ফেলা হবে'
+                    : 'Only vacant flats will be removed'}
+                </p>
+              )}
+              {editProperty && newTotalUnits > editProperty.totalFlats && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === 'bn' 
+                    ? `${newTotalUnits - editProperty.totalFlats}টি নতুন ফ্ল্যাট যোগ হবে`
+                    : `${newTotalUnits - editProperty.totalFlats} new flats will be added`}
+                </p>
+              )}
+            </div>
             {editProperty && (
-              <div className="text-sm text-muted-foreground">
-                {language === 'bn' 
-                  ? `এই প্রপার্টিতে ${editProperty.totalFlats}টি ফ্ল্যাট রয়েছে`
-                  : `This property has ${editProperty.totalFlats} flats`}
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-sm font-medium mb-2">{t.flatNumbers}:</p>
+                <div className="flex flex-wrap gap-1">
+                  {editProperty.flatNumbers.map((num) => (
+                    <Badge key={num} variant="secondary" className="text-xs">
+                      {num}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>
