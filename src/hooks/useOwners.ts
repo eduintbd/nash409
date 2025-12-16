@@ -37,9 +37,11 @@ export const useCreateOwner = () => {
       flat_ids?: string[]; 
       flat_occupancy?: Record<string, 'owner-occupied' | 'for-rent'>;
       new_property?: {
-        flat_number: string;
-        floor: number;
         building_name: string;
+        number_of_flats: number;
+        from_flat_number: string;
+        to_flat_number: string;
+        start_floor: number;
       } | null;
     }) => {
       const { flat_ids, flat_occupancy, new_property, ...ownerData } = owner;
@@ -47,28 +49,42 @@ export const useCreateOwner = () => {
       let finalFlatIds = flat_ids || [];
       let finalFlatOccupancy = flat_occupancy || {};
       
-      // If new property, create the flat first
+      // If new property, create the flats first
       if (new_property) {
         const occupancy = flat_occupancy?.['new'] || 'owner-occupied';
         const status = occupancy === 'owner-occupied' ? 'owner-occupied' : 'vacant';
         
-        const { data: newFlat, error: flatError } = await supabase
-          .from('flats')
-          .insert({
-            flat_number: new_property.flat_number,
-            floor: new_property.floor,
-            building_name: new_property.building_name,
-            size: 1200,
-            status: status as 'owner-occupied' | 'tenant' | 'vacant',
-          })
-          .select()
-          .single();
+        // Create multiple flats based on the range
+        const createdFlatIds: string[] = [];
+        const numFlats = new_property.number_of_flats;
         
-        if (flatError) throw flatError;
+        // Generate flat numbers based on from-to pattern or simple numbering
+        for (let i = 0; i < numFlats; i++) {
+          const flatNumber = numFlats === 1 
+            ? new_property.from_flat_number 
+            : `${new_property.from_flat_number}-${i + 1}`;
+          
+          const floor = new_property.start_floor + Math.floor(i / 4); // 4 flats per floor
+          
+          const { data: newFlat, error: flatError } = await supabase
+            .from('flats')
+            .insert({
+              flat_number: flatNumber,
+              floor: floor,
+              building_name: new_property.building_name,
+              size: 1200,
+              status: status as 'owner-occupied' | 'tenant' | 'vacant',
+            })
+            .select()
+            .single();
+          
+          if (flatError) throw flatError;
+          createdFlatIds.push(newFlat.id);
+        }
         
-        finalFlatIds = [newFlat.id];
-        finalFlatOccupancy = { [newFlat.id]: occupancy };
-        ownerData.flat_id = newFlat.id;
+        finalFlatIds = createdFlatIds;
+        finalFlatOccupancy = Object.fromEntries(createdFlatIds.map(id => [id, occupancy]));
+        ownerData.flat_id = createdFlatIds[0];
       }
       
       const { data, error } = await supabase
@@ -127,9 +143,11 @@ export const useUpdateOwner = () => {
       flat_ids?: string[];
       flat_occupancy?: Record<string, 'owner-occupied' | 'for-rent'>;
       new_property?: {
-        flat_number: string;
-        floor: number;
         building_name: string;
+        number_of_flats: number;
+        from_flat_number: string;
+        to_flat_number: string;
+        start_floor: number;
       } | null;
     }) => {
       const { data, error } = await supabase
