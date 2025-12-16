@@ -9,6 +9,21 @@ export interface OwnerFlat {
   created_at: string;
 }
 
+// Get all owner flats with owner and flat details (for admin view)
+export const useAllOwnerFlats = () => {
+  return useQuery({
+    queryKey: ['all-owner-flats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('owner_flats')
+        .select('*, flats(*), owners(id, name, phone, email)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+};
+
 // Get all flats for a specific owner
 export const useOwnerFlats = (ownerId?: string) => {
   return useQuery({
