@@ -415,43 +415,64 @@ export type Database = {
       }
       tenants: {
         Row: {
+          agreement_agreed_at: string | null
+          agreement_status: string | null
+          agreement_token: string | null
           created_at: string
           email: string | null
           end_date: string | null
           flat_id: string | null
+          house_rules: string | null
           id: string
+          invitation_sent_at: string | null
+          maintenance_responsibilities: string | null
           name: string
           nid: string | null
           phone: string
           rent_amount: number
+          security_deposit: number | null
           start_date: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          agreement_agreed_at?: string | null
+          agreement_status?: string | null
+          agreement_token?: string | null
           created_at?: string
           email?: string | null
           end_date?: string | null
           flat_id?: string | null
+          house_rules?: string | null
           id?: string
+          invitation_sent_at?: string | null
+          maintenance_responsibilities?: string | null
           name: string
           nid?: string | null
           phone: string
           rent_amount: number
+          security_deposit?: number | null
           start_date?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          agreement_agreed_at?: string | null
+          agreement_status?: string | null
+          agreement_token?: string | null
           created_at?: string
           email?: string | null
           end_date?: string | null
           flat_id?: string | null
+          house_rules?: string | null
           id?: string
+          invitation_sent_at?: string | null
+          maintenance_responsibilities?: string | null
           name?: string
           nid?: string | null
           phone?: string
           rent_amount?: number
+          security_deposit?: number | null
           start_date?: string
           updated_at?: string
           user_id?: string | null
