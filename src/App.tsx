@@ -20,6 +20,7 @@ import PendingApproval from "./pages/PendingApproval";
 import UserApprovals from "./pages/UserApprovals";
 import TenantApprovals from "./pages/TenantApprovals";
 import MyTenant from "./pages/MyTenant";
+import MyProperties from "./pages/MyProperties";
 import TenantAgreement from "./pages/TenantAgreement";
 import NotFound from "./pages/NotFound";
 
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/tenant-approvals" element={<TenantApprovals />} />
               <Route path="/flats" element={<Flats />} />
               <Route path="/my-tenant" element={<MyTenant />} />
+              <Route path="/my-properties" element={<MyProperties />} />
               <Route path="/residents" element={<Residents />} />
               <Route path="/employees" element={<Employees />} />
               <Route path="/invoices" element={<Invoices />} />

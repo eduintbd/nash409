@@ -45,6 +45,7 @@ export function Sidebar() {
   // Limited navigation for owners
   const ownerNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
+    { name: language === 'bn' ? 'আমার সম্পত্তি' : 'My Properties', href: '/my-properties', icon: Building2 },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
     { name: language === 'bn' ? 'আমার ভাড়াটিয়া' : 'My Tenant', href: '/my-tenant', icon: UserPlus },
     { name: language === 'bn' ? 'ভাড়াটিয়া অনুমোদন' : 'Tenant Approvals', href: '/tenant-approvals', icon: UserCheck },
