@@ -23,7 +23,7 @@ import { z } from 'zod';
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
-type SignupRole = 'owner' | 'tenant' | 'employee';
+type SignupRole = 'owner' | 'tenant' | 'employee' | 'interested_tenant';
 
 const Auth = () => {
   const { user, signIn, isLoading } = useAuth();
@@ -227,6 +227,7 @@ const Auth = () => {
                     <SelectContent>
                       <SelectItem value="owner">{language === 'bn' ? 'ফ্ল্যাট মালিক' : 'Flat Owner'}</SelectItem>
                       <SelectItem value="tenant">{language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant'}</SelectItem>
+                      <SelectItem value="interested_tenant">{language === 'bn' ? 'আগ্রহী ভাড়াটিয়া' : 'Interested Tenant'}</SelectItem>
                       <SelectItem value="employee">{language === 'bn' ? 'কর্মচারী' : 'Employee'}</SelectItem>
                     </SelectContent>
                   </Select>
