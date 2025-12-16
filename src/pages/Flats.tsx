@@ -4,11 +4,14 @@ import { Header } from '@/components/layout/Header';
 import { useFlats, useUpdateFlat, useCreateFlat, useDeleteFlat, Flat } from '@/hooks/useFlats';
 import { useOwners, useUpdateOwner, Owner } from '@/hooks/useOwners';
 import { useTenants, useUpdateTenant, Tenant } from '@/hooks/useTenants';
+import { useAllOwnerFlats } from '@/hooks/useOwnerFlats';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -34,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Building2, User, Phone, Mail, Car, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Search, Building2, User, Phone, Mail, Car, Plus, Pencil, Trash2, MapPin, Home } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
 import FlatForm from '@/components/forms/FlatForm';
@@ -45,13 +48,16 @@ const Flats = () => {
   const { data: flats, isLoading } = useFlats();
   const { data: owners } = useOwners();
   const { data: tenants } = useTenants();
+  const { data: allOwnerFlats, isLoading: ownerFlatsLoading } = useAllOwnerFlats();
   const updateFlat = useUpdateFlat();
   const createFlat = useCreateFlat();
   const deleteFlat = useDeleteFlat();
   const updateOwner = useUpdateOwner();
   const updateTenant = useUpdateTenant();
   
+  const [activeTab, setActiveTab] = useState('all-flats');
   const [search, setSearch] = useState('');
+  const [ownerSearch, setOwnerSearch] = useState('');
   const [selectedFlat, setSelectedFlat] = useState<Flat | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editFlat, setEditFlat] = useState<Flat | null>(null);
@@ -70,8 +76,31 @@ const Flats = () => {
   };
 
   const filteredFlats = flats?.filter(flat => 
-    flat.flat_number.toLowerCase().includes(search.toLowerCase())
+    flat.flat_number.toLowerCase().includes(search.toLowerCase()) ||
+    flat.building_name?.toLowerCase().includes(search.toLowerCase())
   ) || [];
+
+  // Group owner flats by owner for admin view
+  const groupedOwnerFlats = allOwnerFlats?.reduce((acc: any, item: any) => {
+    const ownerId = item.owner_id;
+    if (!acc[ownerId]) {
+      acc[ownerId] = {
+        owner: item.owners,
+        flats: []
+      };
+    }
+    acc[ownerId].flats.push(item.flats);
+    return acc;
+  }, {}) || {};
+
+  const filteredOwnerGroups = Object.entries(groupedOwnerFlats).filter(([_, group]: [string, any]) => {
+    const searchLower = ownerSearch.toLowerCase();
+    return group.owner?.name?.toLowerCase().includes(searchLower) ||
+           group.flats.some((f: any) => 
+             f?.flat_number?.toLowerCase().includes(searchLower) ||
+             f?.building_name?.toLowerCase().includes(searchLower)
+           );
+  });
 
   const getOwner = (flatId: string) => owners?.find(o => o.flat_id === flatId) as Owner | undefined;
   const getTenant = (flatId: string) => tenants?.find(t => t.flat_id === flatId) as Tenant | undefined;
@@ -152,103 +181,309 @@ const Flats = () => {
       />
       
       <div className="p-6 space-y-6 animate-fade-in">
-        {/* Actions Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t.flats.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          {isAdmin && (
-            <Button onClick={() => { setEditFlat(null); setShowForm(true); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              {language === 'bn' ? 'নতুন ফ্ল্যাট' : 'Add Flat'}
-            </Button>
-          )}
-        </div>
+        {isAdmin ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="all-flats">
+                <Building2 className="h-4 w-4 mr-2" />
+                {language === 'bn' ? 'সকল ফ্ল্যাট' : 'All Flats'}
+              </TabsTrigger>
+              <TabsTrigger value="owner-properties">
+                <User className="h-4 w-4 mr-2" />
+                {language === 'bn' ? 'মালিকদের সম্পত্তি' : 'Owner Properties'}
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Flats Table */}
-        <div className="stat-card overflow-hidden">
-          {isLoading ? (
-            <div className="p-4 space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12" />
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="table-header">
-                  <TableHead className="w-24">{t.flats.flatNo}</TableHead>
-                  <TableHead>{t.flats.floor}</TableHead>
-                  <TableHead>{t.flats.size}</TableHead>
-                  <TableHead>{t.common.status}</TableHead>
-                  <TableHead>{t.flats.owner}</TableHead>
-                  <TableHead>{language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant'}</TableHead>
-                  <TableHead>{t.flats.contact}</TableHead>
-                  <TableHead>{t.flats.parking}</TableHead>
-                  <TableHead className="text-right">{t.common.actions}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredFlats.map((flat) => {
-                  const owner = getOwner(flat.id);
-                  const tenant = getTenant(flat.id);
-                  // Contact person: show tenant contact if rented, otherwise owner
-                  const contactPerson = flat.status === 'tenant' && tenant ? tenant : owner;
+            <TabsContent value="all-flats" className="space-y-4">
+              {/* Actions Bar */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t.flats.searchPlaceholder}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Button onClick={() => { setEditFlat(null); setShowForm(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {language === 'bn' ? 'নতুন ফ্ল্যাট' : 'Add Flat'}
+                </Button>
+              </div>
 
-                  return (
-                    <TableRow key={flat.id} className="table-row-hover">
-                      <TableCell className="font-semibold">{flat.flat_number}</TableCell>
-                      <TableCell>{flat.floor}</TableCell>
-                      <TableCell>{flat.size.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusColors[flat.status]}>
-                          {statusLabels[flat.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{owner?.name || '-'}</TableCell>
-                      <TableCell>{tenant?.name || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {contactPerson?.phone || '-'}
-                      </TableCell>
-                      <TableCell>
-                        {flat.parking_spot ? (
-                          <span className="flex items-center gap-1 text-sm">
-                            <Car className="h-3 w-3" /> {flat.parking_spot}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">N/A</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedFlat(flat)}>
-                            {t.common.details}
-                          </Button>
-                          {isAdmin && (
-                            <>
-                              <Button variant="ghost" size="icon" onClick={() => handleEdit(flat)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(flat)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </>
-                          )}
+              {/* Flats Table */}
+              <div className="stat-card overflow-hidden">
+                {isLoading ? (
+                  <div className="p-4 space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Skeleton key={i} className="h-12" />
+                    ))}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="table-header">
+                        <TableHead>{language === 'bn' ? 'বিল্ডিং' : 'Building'}</TableHead>
+                        <TableHead className="w-24">{t.flats.flatNo}</TableHead>
+                        <TableHead>{t.flats.floor}</TableHead>
+                        <TableHead>{t.flats.size}</TableHead>
+                        <TableHead>{t.common.status}</TableHead>
+                        <TableHead>{t.flats.owner}</TableHead>
+                        <TableHead>{language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant'}</TableHead>
+                        <TableHead>{t.flats.contact}</TableHead>
+                        <TableHead>{t.flats.parking}</TableHead>
+                        <TableHead className="text-right">{t.common.actions}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredFlats.map((flat) => {
+                        const owner = getOwner(flat.id);
+                        const tenant = getTenant(flat.id);
+                        const contactPerson = flat.status === 'tenant' && tenant ? tenant : owner;
+
+                        return (
+                          <TableRow key={flat.id} className="table-row-hover">
+                            <TableCell className="text-muted-foreground">
+                              {flat.building_name || '-'}
+                            </TableCell>
+                            <TableCell className="font-semibold">{flat.flat_number}</TableCell>
+                            <TableCell>{flat.floor}</TableCell>
+                            <TableCell>{flat.size.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={statusColors[flat.status]}>
+                                {statusLabels[flat.status]}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{owner?.name || '-'}</TableCell>
+                            <TableCell>{tenant?.name || '-'}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {contactPerson?.phone || '-'}
+                            </TableCell>
+                            <TableCell>
+                              {flat.parking_spot ? (
+                                <span className="flex items-center gap-1 text-sm">
+                                  <Car className="h-3 w-3" /> {flat.parking_spot}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">N/A</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => setSelectedFlat(flat)}>
+                                  {t.common.details}
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(flat)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDelete(flat)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="owner-properties" className="space-y-4">
+              {/* Search */}
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={language === 'bn' ? 'মালিক বা সম্পত্তি খুঁজুন...' : 'Search owner or property...'}
+                  value={ownerSearch}
+                  onChange={(e) => setOwnerSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              {/* Owner Properties Cards */}
+              {ownerFlatsLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-40" />
+                  ))}
+                </div>
+              ) : filteredOwnerGroups.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    {language === 'bn' ? 'কোনো মালিকের সম্পত্তি পাওয়া যায়নি' : 'No owner properties found'}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {filteredOwnerGroups.map(([ownerId, group]: [string, any]) => (
+                    <Card key={ownerId}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-3 text-lg">
+                          <div className="p-2 rounded-full bg-primary/10">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">{group.owner?.name || 'Unknown Owner'}</p>
+                            <div className="flex items-center gap-4 text-sm font-normal text-muted-foreground">
+                              {group.owner?.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" /> {group.owner.phone}
+                                </span>
+                              )}
+                              {group.owner?.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" /> {group.owner.email}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Badge className="ml-auto" variant="secondary">
+                            {group.flats.length} {language === 'bn' ? 'টি সম্পত্তি' : 'Properties'}
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>{language === 'bn' ? 'বিল্ডিং/লোকেশন' : 'Building/Location'}</TableHead>
+                                <TableHead>{t.flats.flatNo}</TableHead>
+                                <TableHead>{t.flats.floor}</TableHead>
+                                <TableHead>{t.flats.size}</TableHead>
+                                <TableHead>{t.common.status}</TableHead>
+                                <TableHead>{t.flats.parking}</TableHead>
+                                <TableHead className="text-right">{t.common.actions}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {group.flats.map((flat: any) => flat && (
+                                <TableRow key={flat.id}>
+                                  <TableCell>
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                                      {flat.building_name || '-'}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="font-semibold">{flat.flat_number}</TableCell>
+                                  <TableCell>{flat.floor}</TableCell>
+                                  <TableCell>{flat.size?.toLocaleString()} sq ft</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className={statusColors[flat.status as keyof typeof statusColors]}>
+                                      {statusLabels[flat.status as keyof typeof statusLabels]}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{flat.parking_spot || '-'}</TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={() => {
+                                          const fullFlat = flats?.find(f => f.id === flat.id);
+                                          if (fullFlat) handleEdit(fullFlat);
+                                        }}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
                         </div>
-                      </TableCell>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <>
+            {/* Non-admin view - original layout */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t.flats.searchPlaceholder}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="stat-card overflow-hidden">
+              {isLoading ? (
+                <div className="p-4 space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12" />
+                  ))}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="table-header">
+                      <TableHead className="w-24">{t.flats.flatNo}</TableHead>
+                      <TableHead>{t.flats.floor}</TableHead>
+                      <TableHead>{t.flats.size}</TableHead>
+                      <TableHead>{t.common.status}</TableHead>
+                      <TableHead>{t.flats.owner}</TableHead>
+                      <TableHead>{language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant'}</TableHead>
+                      <TableHead>{t.flats.contact}</TableHead>
+                      <TableHead>{t.flats.parking}</TableHead>
+                      <TableHead className="text-right">{t.common.actions}</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFlats.map((flat) => {
+                      const owner = getOwner(flat.id);
+                      const tenant = getTenant(flat.id);
+                      const contactPerson = flat.status === 'tenant' && tenant ? tenant : owner;
+
+                      return (
+                        <TableRow key={flat.id} className="table-row-hover">
+                          <TableCell className="font-semibold">{flat.flat_number}</TableCell>
+                          <TableCell>{flat.floor}</TableCell>
+                          <TableCell>{flat.size.toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={statusColors[flat.status]}>
+                              {statusLabels[flat.status]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{owner?.name || '-'}</TableCell>
+                          <TableCell>{tenant?.name || '-'}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {contactPerson?.phone || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {flat.parking_spot ? (
+                              <span className="flex items-center gap-1 text-sm">
+                                <Car className="h-3 w-3" /> {flat.parking_spot}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">N/A</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedFlat(flat)}>
+                              {t.common.details}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Details Dialog */}
