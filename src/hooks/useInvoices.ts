@@ -78,6 +78,27 @@ export const useUpdateInvoice = () => {
   });
 };
 
+export const useDeleteInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast({ title: 'Invoice deleted / বিল মুছে ফেলা হয়েছে' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
 export const useGenerateBulkInvoices = () => {
   const queryClient = useQueryClient();
   
