@@ -12,6 +12,13 @@ export interface Tenant {
   rent_amount: number;
   start_date: string;
   end_date: string | null;
+  security_deposit: number | null;
+  house_rules: string | null;
+  maintenance_responsibilities: string | null;
+  agreement_status: string | null;
+  agreement_token: string | null;
+  agreement_agreed_at: string | null;
+  invitation_sent_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,11 +37,13 @@ export const useTenants = () => {
   });
 };
 
+export type CreateTenantInput = Omit<Tenant, 'id' | 'created_at' | 'updated_at' | 'agreement_status' | 'agreement_token' | 'agreement_agreed_at' | 'invitation_sent_at'>;
+
 export const useCreateTenant = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (tenant: Omit<Tenant, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (tenant: CreateTenantInput) => {
       const { data, error } = await supabase
         .from('tenants')
         .insert(tenant)

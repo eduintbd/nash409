@@ -1,1 +1,4 @@
 project_id = "mouycggqqbievsjwsdgc"
+
+[functions.send-tenant-agreement]
+verify_jwt = false
