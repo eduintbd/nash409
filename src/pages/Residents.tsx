@@ -15,6 +15,8 @@ import { TenantForm } from '@/components/forms/TenantForm';
 import { Search, Plus, Mail, Phone, Building2, Calendar, Edit, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,11 +28,26 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+// Hook to fetch all owner_flats
+const useAllOwnerFlats = () => {
+  return useQuery({
+    queryKey: ['all_owner_flats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('owner_flats')
+        .select('owner_id, flat_id');
+      if (error) throw error;
+      return data;
+    },
+  });
+};
+
 const Residents = () => {
   const { t, language } = useLanguage();
   const { data: owners, isLoading: loadingOwners } = useOwners();
   const { data: tenants, isLoading: loadingTenants } = useTenants();
   const { data: flats } = useFlats();
+  const { data: ownerFlats } = useAllOwnerFlats();
   const deleteOwner = useDeleteOwner();
   const deleteTenant = useDeleteTenant();
   
@@ -41,6 +58,11 @@ const Residents = () => {
   const [editTenant, setEditTenant] = useState<any>(null);
   const [deleteOwnerModal, setDeleteOwnerModal] = useState<string | null>(null);
   const [deleteTenantModal, setDeleteTenantModal] = useState<string | null>(null);
+
+  // Get flat IDs for a specific owner
+  const getOwnerFlatIds = (ownerId: string) => {
+    return ownerFlats?.filter(of => of.owner_id === ownerId).map(of => of.flat_id) || [];
+  };
 
   const filteredOwners = owners?.filter(owner =>
     owner.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -118,7 +140,8 @@ const Residents = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredOwners.map((owner: any) => {
-                  const flat = getFlat(owner.flat_id);
+                  const ownerFlatIds = getOwnerFlatIds(owner.id);
+                  const ownerFlatsDisplay = ownerFlatIds.map(id => flats?.find(f => f.id === id)?.flat_number).filter(Boolean).join(', ');
                   return (
                     <Card key={owner.id} className="stat-card border-0">
                       <CardHeader className="pb-3">
@@ -127,7 +150,7 @@ const Residents = () => {
                             <CardTitle className="text-base">{owner.name}</CardTitle>
                             <CardDescription className="flex items-center gap-1 mt-1">
                               <Building2 className="h-3 w-3" />
-                              {flat?.flat_number || t.residents.flatNotAssigned}
+                              {ownerFlatsDisplay || t.residents.flatNotAssigned}
                             </CardDescription>
                           </div>
                           <div className="flex items-center gap-1">
@@ -234,7 +257,12 @@ const Residents = () => {
         </Tabs>
       </div>
 
-      <OwnerForm open={ownerFormOpen} onOpenChange={setOwnerFormOpen} editData={editOwner} />
+      <OwnerForm 
+        open={ownerFormOpen} 
+        onOpenChange={setOwnerFormOpen} 
+        editData={editOwner} 
+        existingFlatIds={editOwner ? getOwnerFlatIds(editOwner.id) : []}
+      />
       <TenantForm open={tenantFormOpen} onOpenChange={setTenantFormOpen} editData={editTenant} />
 
       <AlertDialog open={!!deleteOwnerModal} onOpenChange={() => setDeleteOwnerModal(null)}>
