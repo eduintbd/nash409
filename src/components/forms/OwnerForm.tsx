@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCreateOwner, useUpdateOwner } from '@/hooks/useOwners';
 import { useFlats } from '@/hooks/useFlats';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -31,6 +32,8 @@ interface OwnerFormProps {
   existingFlatIds?: string[];
 }
 
+type OccupancyType = 'owner-occupied' | 'for-rent';
+
 export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }: OwnerFormProps) => {
   const { language } = useLanguage();
   const { data: flats } = useFlats();
@@ -47,6 +50,9 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
     ownership_start: new Date().toISOString().split('T')[0],
   });
 
+  // Track occupancy type for each selected flat
+  const [flatOccupancy, setFlatOccupancy] = useState<Record<string, OccupancyType>>({});
+
   useEffect(() => {
     if (editData) {
       setFormData({
@@ -58,6 +64,13 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
         flat_ids: existingFlatIds,
         ownership_start: editData.ownership_start || new Date().toISOString().split('T')[0],
       });
+      // Set existing occupancy based on flat status
+      const occupancy: Record<string, OccupancyType> = {};
+      existingFlatIds.forEach(flatId => {
+        const flat = flats?.find(f => f.id === flatId);
+        occupancy[flatId] = flat?.status === 'owner-occupied' ? 'owner-occupied' : 'for-rent';
+      });
+      setFlatOccupancy(occupancy);
     } else {
       setFormData({
         name: '',
@@ -68,8 +81,9 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
         flat_ids: [],
         ownership_start: new Date().toISOString().split('T')[0],
       });
+      setFlatOccupancy({});
     }
-  }, [editData, existingFlatIds, open]);
+  }, [editData, existingFlatIds, open, flats]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +97,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
       flat_id: formData.flat_ids[0] || null,
       ownership_start: formData.ownership_start,
       flat_ids: formData.flat_ids,
+      flat_occupancy: flatOccupancy,
     };
 
     if (editData) {
@@ -95,11 +110,33 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
   };
 
   const handleFlatToggle = (flatId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      flat_ids: prev.flat_ids.includes(flatId)
+    setFormData(prev => {
+      const newFlatIds = prev.flat_ids.includes(flatId)
         ? prev.flat_ids.filter(id => id !== flatId)
-        : [...prev.flat_ids, flatId]
+        : [...prev.flat_ids, flatId];
+      
+      // Set default occupancy for newly added flats
+      if (!prev.flat_ids.includes(flatId)) {
+        setFlatOccupancy(prevOccupancy => ({
+          ...prevOccupancy,
+          [flatId]: 'owner-occupied',
+        }));
+      } else {
+        // Remove occupancy when flat is deselected
+        setFlatOccupancy(prevOccupancy => {
+          const { [flatId]: _, ...rest } = prevOccupancy;
+          return rest;
+        });
+      }
+      
+      return { ...prev, flat_ids: newFlatIds };
+    });
+  };
+
+  const handleOccupancyChange = (flatId: string, occupancy: OccupancyType) => {
+    setFlatOccupancy(prev => ({
+      ...prev,
+      [flatId]: occupancy,
     }));
   };
 
@@ -132,11 +169,14 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
     floor: language === 'bn' ? 'তলা' : 'Floor',
     tenant: language === 'bn' ? 'ভাড়াটে আছে' : 'Has Tenant',
     vacant: language === 'bn' ? 'খালি' : 'Vacant',
+    occupancyType: language === 'bn' ? 'থাকবেন নাকি ভাড়া দেবেন?' : 'Will stay or rent?',
+    ownerWillStay: language === 'bn' ? 'মালিক থাকবেন' : 'Owner will stay',
+    willRent: language === 'bn' ? 'ভাড়া দেবেন' : 'Will rent out',
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t.title}</DialogTitle>
           <DialogDescription>{t.description}</DialogDescription>
@@ -157,24 +197,51 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
           <div>
             <Label>{t.flats} *</Label>
             <p className="text-sm text-muted-foreground mb-2">{t.selectFlats}</p>
-            <ScrollArea className="h-32 border rounded-md p-2">
-              <div className="space-y-2">
+            <ScrollArea className="h-48 border rounded-md p-2">
+              <div className="space-y-3">
                 {availableFlats.map(flat => (
-                  <div key={flat.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`flat-${flat.id}`}
-                      checked={formData.flat_ids.includes(flat.id)}
-                      onCheckedChange={() => handleFlatToggle(flat.id)}
-                    />
-                    <label
-                      htmlFor={`flat-${flat.id}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                    >
-                      {flat.flat_number} ({t.floor} {flat.floor})
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {flat.status === 'tenant' ? `- ${t.tenant}` : flat.status === 'vacant' ? `- ${t.vacant}` : ''}
-                      </span>
-                    </label>
+                  <div key={flat.id} className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`flat-${flat.id}`}
+                        checked={formData.flat_ids.includes(flat.id)}
+                        onCheckedChange={() => handleFlatToggle(flat.id)}
+                      />
+                      <label
+                        htmlFor={`flat-${flat.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                      >
+                        {flat.flat_number} ({t.floor} {flat.floor})
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {flat.status === 'tenant' ? `- ${t.tenant}` : flat.status === 'vacant' ? `- ${t.vacant}` : ''}
+                        </span>
+                      </label>
+                    </div>
+                    
+                    {/* Occupancy selection - shown when flat is selected */}
+                    {formData.flat_ids.includes(flat.id) && (
+                      <div className="ml-6 p-2 bg-muted/50 rounded-md">
+                        <p className="text-xs text-muted-foreground mb-2">{t.occupancyType}</p>
+                        <RadioGroup
+                          value={flatOccupancy[flat.id] || 'owner-occupied'}
+                          onValueChange={(value) => handleOccupancyChange(flat.id, value as OccupancyType)}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="owner-occupied" id={`stay-${flat.id}`} />
+                            <label htmlFor={`stay-${flat.id}`} className="text-xs cursor-pointer">
+                              {t.ownerWillStay}
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="for-rent" id={`rent-${flat.id}`} />
+                            <label htmlFor={`rent-${flat.id}`} className="text-xs cursor-pointer">
+                              {t.willRent}
+                            </label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

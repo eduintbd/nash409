@@ -33,8 +33,11 @@ export const useCreateOwner = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (owner: Omit<Owner, 'id' | 'created_at' | 'updated_at'> & { flat_ids?: string[] }) => {
-      const { flat_ids, ...ownerData } = owner;
+    mutationFn: async (owner: Omit<Owner, 'id' | 'created_at' | 'updated_at'> & { 
+      flat_ids?: string[]; 
+      flat_occupancy?: Record<string, 'owner-occupied' | 'for-rent'>;
+    }) => {
+      const { flat_ids, flat_occupancy, ...ownerData } = owner;
       
       const { data, error } = await supabase
         .from('owners')
@@ -55,11 +58,15 @@ export const useCreateOwner = () => {
           .insert(ownerFlatsData);
         if (ownerFlatsError) throw ownerFlatsError;
         
-        // Update all flats status to 'owner-occupied'
-        await supabase
-          .from('flats')
-          .update({ status: 'owner-occupied' })
-          .in('id', flat_ids);
+        // Update flat status based on occupancy selection
+        for (const flatId of flat_ids) {
+          const occupancy = flat_occupancy?.[flatId] || 'owner-occupied';
+          const status = occupancy === 'owner-occupied' ? 'owner-occupied' : 'vacant';
+          await supabase
+            .from('flats')
+            .update({ status })
+            .eq('id', flatId);
+        }
       }
       
       return data;
@@ -81,7 +88,11 @@ export const useUpdateOwner = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, flat_ids, ...updates }: Partial<Owner> & { id: string; flat_ids?: string[] }) => {
+    mutationFn: async ({ id, flat_ids, flat_occupancy, ...updates }: Partial<Owner> & { 
+      id: string; 
+      flat_ids?: string[];
+      flat_occupancy?: Record<string, 'owner-occupied' | 'for-rent'>;
+    }) => {
       const { data, error } = await supabase
         .from('owners')
         .update(updates)
@@ -109,11 +120,15 @@ export const useUpdateOwner = () => {
             .from('owner_flats')
             .insert(ownerFlatsData);
           
-          // Update all new flats status to 'owner-occupied'
-          await supabase
-            .from('flats')
-            .update({ status: 'owner-occupied' })
-            .in('id', flat_ids);
+          // Update flat status based on occupancy selection
+          for (const flatId of flat_ids) {
+            const occupancy = flat_occupancy?.[flatId] || 'owner-occupied';
+            const status = occupancy === 'owner-occupied' ? 'owner-occupied' : 'vacant';
+            await supabase
+              .from('flats')
+              .update({ status })
+              .eq('id', flatId);
+          }
         }
       }
       
