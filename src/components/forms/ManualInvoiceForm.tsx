@@ -122,6 +122,7 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
       status: 'unpaid',
       paid_date: null,
       description: description || (invoiceType === 'rent' ? (language === 'en' ? 'Monthly Rent' : 'মাসিক ভাড়া') : null),
+      invoice_type: invoiceType === 'rent' ? 'rent' : 'service_charge',
     });
 
     onOpenChange(false);

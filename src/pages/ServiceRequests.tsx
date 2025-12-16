@@ -148,6 +148,7 @@ const ServiceRequests = () => {
         status: 'unpaid',
         paid_date: null,
         description: `Service Request TKT-${request.ticket_number}: ${request.title}`,
+        invoice_type: 'service_request',
       });
       invoiceId = invoice.id;
     }
