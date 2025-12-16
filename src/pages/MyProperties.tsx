@@ -33,6 +33,7 @@ export default function MyProperties() {
   const [editingFlat, setEditingFlat] = useState<any>(null);
   const [newFlatData, setNewFlatData] = useState({
     flat_number: '',
+    building_name: '',
     floor: 1,
     size: 1200,
     parking_spot: '',
@@ -48,6 +49,7 @@ export default function MyProperties() {
     floor: language === 'bn' ? 'তলা' : 'Floor',
     size: language === 'bn' ? 'আকার (বর্গফুট)' : 'Size (sq ft)',
     parking: language === 'bn' ? 'পার্কিং' : 'Parking',
+    buildingName: language === 'bn' ? 'বিল্ডিং/লোকেশন' : 'Building/Location',
     status: language === 'bn' ? 'অবস্থা' : 'Status',
     actions: language === 'bn' ? 'কার্যক্রম' : 'Actions',
     save: language === 'bn' ? 'সংরক্ষণ করুন' : 'Save',
@@ -88,6 +90,7 @@ export default function MyProperties() {
     try {
       const flat = await createFlat.mutateAsync({
         flat_number: newFlatData.flat_number,
+        building_name: newFlatData.building_name || null,
         floor: newFlatData.floor,
         size: newFlatData.size,
         parking_spot: newFlatData.parking_spot || null,
@@ -99,7 +102,7 @@ export default function MyProperties() {
       }
       
       setShowAddDialog(false);
-      setNewFlatData({ flat_number: '', floor: 1, size: 1200, parking_spot: '', status: 'owner-occupied' });
+      setNewFlatData({ flat_number: '', building_name: '', floor: 1, size: 1200, parking_spot: '', status: 'owner-occupied' });
     } catch (error) {
       console.error('Error creating flat:', error);
     }
@@ -116,6 +119,7 @@ export default function MyProperties() {
     await updateFlat.mutateAsync({
       id: editingFlat.id,
       flat_number: editingFlat.flat_number,
+      building_name: editingFlat.building_name,
       floor: editingFlat.floor,
       size: editingFlat.size,
       parking_spot: editingFlat.parking_spot,
@@ -209,6 +213,14 @@ export default function MyProperties() {
               <DialogTitle>{t.addNew}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              <div>
+                <Label>{t.buildingName}</Label>
+                <Input
+                  value={newFlatData.building_name}
+                  onChange={(e) => setNewFlatData({ ...newFlatData, building_name: e.target.value })}
+                  placeholder="e.g., Green Valley Tower, Dhaka"
+                />
+              </div>
               <div>
                 <Label>{t.flatNumber}</Label>
                 <Input
@@ -316,6 +328,7 @@ export default function MyProperties() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>{t.buildingName}</TableHead>
                     <TableHead>{t.flatNumber}</TableHead>
                     <TableHead>{t.floor}</TableHead>
                     <TableHead>{t.size}</TableHead>
@@ -327,7 +340,8 @@ export default function MyProperties() {
                 <TableBody>
                   {ownerFlats.map((ownerFlat: any) => (
                     <TableRow key={ownerFlat.id}>
-                      <TableCell className="font-medium">{ownerFlat.flats?.flat_number}</TableCell>
+                      <TableCell className="font-medium">{ownerFlat.flats?.building_name || '-'}</TableCell>
+                      <TableCell>{ownerFlat.flats?.flat_number}</TableCell>
                       <TableCell>{ownerFlat.flats?.floor}</TableCell>
                       <TableCell>{ownerFlat.flats?.size?.toLocaleString()} {t.sqft}</TableCell>
                       <TableCell>{ownerFlat.flats?.parking_spot || '-'}</TableCell>
@@ -370,6 +384,14 @@ export default function MyProperties() {
           </DialogHeader>
           {editingFlat && (
             <div className="space-y-4 py-4">
+              <div>
+                <Label>{t.buildingName}</Label>
+                <Input
+                  value={editingFlat.building_name || ''}
+                  onChange={(e) => setEditingFlat({ ...editingFlat, building_name: e.target.value })}
+                  placeholder="e.g., Green Valley Tower, Dhaka"
+                />
+              </div>
               <div>
                 <Label>{t.flatNumber}</Label>
                 <Input
