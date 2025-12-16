@@ -398,9 +398,12 @@ export type Database = {
           description: string | null
           flat_id: string
           id: string
+          invoice_id: string | null
           priority: Database["public"]["Enums"]["request_priority"]
+          resolution_notes: string | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["request_status"]
+          ticket_number: number
           title: string
           updated_at: string
         }
@@ -412,9 +415,12 @@ export type Database = {
           description?: string | null
           flat_id: string
           id?: string
+          invoice_id?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
+          resolution_notes?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["request_status"]
+          ticket_number?: number
           title: string
           updated_at?: string
         }
@@ -426,9 +432,12 @@ export type Database = {
           description?: string | null
           flat_id?: string
           id?: string
+          invoice_id?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
+          resolution_notes?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["request_status"]
+          ticket_number?: number
           title?: string
           updated_at?: string
         }
@@ -445,6 +454,13 @@ export type Database = {
             columns: ["flat_id"]
             isOneToOne: false
             referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]

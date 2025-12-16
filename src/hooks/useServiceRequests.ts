@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 
 export interface ServiceRequest {
   id: string;
+  ticket_number: number;
   flat_id: string;
   title: string;
   category: 'plumbing' | 'electrical' | 'elevator' | 'common-area' | 'other';
@@ -13,6 +14,8 @@ export interface ServiceRequest {
   assigned_to: string | null;
   cost: number | null;
   resolved_at: string | null;
+  resolution_notes: string | null;
+  invoice_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,7 +38,7 @@ export const useCreateServiceRequest = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (request: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (request: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at' | 'ticket_number' | 'resolution_notes' | 'invoice_id'>) => {
       const { data, error } = await supabase
         .from('service_requests')
         .insert(request)
