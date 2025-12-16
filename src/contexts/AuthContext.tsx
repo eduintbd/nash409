@@ -14,6 +14,8 @@ interface AuthContextType {
   isApproved: boolean;
   userRole: AppRole | null;
   userFlatId: string | null;
+  userFlatIds: string[]; // Multiple flats for owners
+  ownerId: string | null; // Owner record ID
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -33,6 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isApproved, setIsApproved] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [userFlatId, setUserFlatId] = useState<string | null>(null);
+  const [userFlatIds, setUserFlatIds] = useState<string[]>([]);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
 
   const checkUserRole = async (userId: string, email: string | undefined) => {
     setIsRoleLoading(true);
@@ -99,13 +103,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       } else if (role === 'owner') {
-        // Get flat_id for owner
+        // Get owner record and all their flats
         const { data: ownerData } = await supabase
           .from('owners')
-          .select('flat_id')
+          .select('id, flat_id')
           .or(`user_id.eq.${userId},email.eq.${email || ''}`)
           .maybeSingle();
-        flatId = ownerData?.flat_id || null;
+        
+        if (ownerData) {
+          setOwnerId(ownerData.id);
+          flatId = ownerData.flat_id || null;
+          
+          // Get all flats from owner_flats junction table
+          const { data: ownerFlatsData } = await supabase
+            .from('owner_flats')
+            .select('flat_id')
+            .eq('owner_id', ownerData.id);
+          
+          if (ownerFlatsData) {
+            setUserFlatIds(ownerFlatsData.map(of => of.flat_id));
+          }
+        }
       } else if (role === 'tenant') {
         // Get flat_id for tenant
         const { data: tenantData } = await supabase
@@ -144,6 +162,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsApproved(false);
           setUserRole(null);
           setUserFlatId(null);
+          setUserFlatIds([]);
+          setOwnerId(null);
           setIsRoleLoading(false);
         }
       }
@@ -193,6 +213,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsApproved(false);
     setUserRole(null);
     setUserFlatId(null);
+    setUserFlatIds([]);
+    setOwnerId(null);
 
     if (error) throw error;
   };
@@ -205,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, session, isLoading, isAdmin, isOwner, isTenant, isApproved, userRole, userFlatId, 
+      user, session, isLoading, isAdmin, isOwner, isTenant, isApproved, userRole, userFlatId, userFlatIds, ownerId,
       signIn, signUp, signOut, refreshUserRole 
     }}>
       {children}

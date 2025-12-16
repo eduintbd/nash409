@@ -107,7 +107,8 @@ const UserApprovals = () => {
 
       // If owner or tenant, create the corresponding record
       if (finalRole === 'owner' && flatId && profile) {
-        const { error: ownerError } = await supabase
+        // Create owner record
+        const { data: newOwner, error: ownerError } = await supabase
           .from('owners')
           .insert({
             user_id: userId,
@@ -115,8 +116,20 @@ const UserApprovals = () => {
             email: profile.email,
             phone: '',
             flat_id: flatId,
-          });
+          })
+          .select('id')
+          .single();
         if (ownerError) throw ownerError;
+
+        // Also add to owner_flats junction table
+        if (newOwner) {
+          await supabase
+            .from('owner_flats')
+            .insert({
+              owner_id: newOwner.id,
+              flat_id: flatId,
+            });
+        }
 
         // Update flat status
         await supabase
