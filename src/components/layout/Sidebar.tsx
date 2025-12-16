@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,14 +14,19 @@ import {
   LogOut,
   UserCheck,
   UserPlus,
+  Menu,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export function Sidebar() {
   const { t, language } = useLanguage();
   const { isAdmin, isOwner, isTenant, userRole, user } = useAuth();
+  const [open, setOpen] = useState(false);
 
   // Full navigation for admin
   const adminNavigation = [
@@ -36,7 +42,7 @@ export function Sidebar() {
     { name: language === 'bn' ? 'ব্যবহারকারী অনুমোদন' : 'User Approvals', href: '/user-approvals', icon: UserCheck },
   ];
 
-  // Limited navigation for owners (can see building expenses + flats + manage tenant + approve tenants + cameras)
+  // Limited navigation for owners
   const ownerNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
@@ -48,7 +54,7 @@ export function Sidebar() {
     { name: t.nav.cameras, href: '/cameras', icon: Camera },
   ];
 
-  // Minimal navigation for tenants (only their stuff)
+  // Minimal navigation for tenants
   const tenantNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
     { name: t.nav.invoices, href: '/invoices', icon: Receipt },
@@ -75,67 +81,90 @@ export function Sidebar() {
     return user?.email?.slice(0, 2).toUpperCase() || 'U';
   };
 
-  return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
-      <div className="flex h-full flex-col">
-        {/* Logo */}
-        <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary">
-            <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-sidebar-foreground">BuildingMS</h1>
-            <p className="text-xs text-sidebar-muted">Management System</p>
-          </div>
+  const SidebarContent = () => (
+    <div className="flex h-full flex-col">
+      {/* Logo */}
+      <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary">
+          <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
+        <div>
+          <h1 className="text-lg font-semibold text-sidebar-foreground">BuildingMS</h1>
+          <p className="text-xs text-sidebar-muted">Management System</p>
+        </div>
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-          {navigation.map((item) => (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              className={({ isActive }) =>
-                cn(
-                  'nav-item',
-                  isActive && 'active'
-                )
-              }
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className="text-sm font-medium">{item.name}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Bottom section */}
-        <div className="border-t border-sidebar-border p-3 space-y-1">
+      {/* Navigation */}
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+        {navigation.map((item) => (
           <NavLink
-            to="/settings"
+            key={item.href}
+            to={item.href}
+            onClick={() => setOpen(false)}
             className={({ isActive }) =>
-              cn('nav-item', isActive && 'active')
+              cn(
+                'nav-item',
+                isActive && 'active'
+              )
             }
           >
-            <Settings className="h-5 w-5 flex-shrink-0" />
-            <span className="text-sm font-medium">{t.nav.settings}</span>
+            <item.icon className="h-5 w-5 flex-shrink-0" />
+            <span className="text-sm font-medium">{item.name}</span>
           </NavLink>
-        </div>
+        ))}
+      </nav>
 
-        {/* User info */}
-        <div className="border-t border-sidebar-border p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-              <span className="text-sm font-medium text-sidebar-foreground">{getUserInitials()}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {user?.user_metadata?.full_name || user?.email || 'User'}
-              </p>
-              <p className="text-xs text-sidebar-muted truncate">{getRoleLabel()}</p>
-            </div>
+      {/* Bottom section */}
+      <div className="border-t border-sidebar-border p-3 space-y-1">
+        <NavLink
+          to="/settings"
+          onClick={() => setOpen(false)}
+          className={({ isActive }) =>
+            cn('nav-item', isActive && 'active')
+          }
+        >
+          <Settings className="h-5 w-5 flex-shrink-0" />
+          <span className="text-sm font-medium">{t.nav.settings}</span>
+        </NavLink>
+      </div>
+
+      {/* User info */}
+      <div className="border-t border-sidebar-border p-4">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center">
+            <span className="text-sm font-medium text-sidebar-foreground">{getUserInitials()}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">
+              {user?.user_metadata?.full_name || user?.email || 'User'}
+            </p>
+            <p className="text-xs text-sidebar-muted truncate">{getRoleLabel()}</p>
           </div>
         </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Menu Button */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="bg-background shadow-md">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-64 bg-sidebar border-sidebar-border">
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
+        <SidebarContent />
+      </aside>
+    </>
   );
 }

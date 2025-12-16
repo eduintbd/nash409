@@ -107,20 +107,20 @@ const Cameras = () => {
         subtitle={t.cameras.subtitle}
       />
       
-      <div className="p-6 space-y-6 animate-fade-in">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
         {/* Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="stat-card">
-            <p className="text-sm text-muted-foreground">{t.cameras.totalCameras}</p>
-            <p className="text-2xl font-bold mt-1">{cameras?.length || 0}</p>
+        <div className="grid grid-cols-3 gap-2 md:gap-4">
+          <div className="stat-card p-3 md:p-6">
+            <p className="text-xs md:text-sm text-muted-foreground">{t.cameras.totalCameras}</p>
+            <p className="text-lg md:text-2xl font-bold mt-1">{cameras?.length || 0}</p>
           </div>
-          <div className="stat-card bg-success/5">
-            <p className="text-sm text-muted-foreground">{t.cameras.online}</p>
-            <p className="text-2xl font-bold mt-1 text-success">{onlineCount}</p>
+          <div className="stat-card bg-success/5 p-3 md:p-6">
+            <p className="text-xs md:text-sm text-muted-foreground">{t.cameras.online}</p>
+            <p className="text-lg md:text-2xl font-bold mt-1 text-success">{onlineCount}</p>
           </div>
-          <div className="stat-card bg-destructive/5">
-            <p className="text-sm text-muted-foreground">{t.cameras.offline}</p>
-            <p className="text-2xl font-bold mt-1 text-destructive">
+          <div className="stat-card bg-destructive/5 p-3 md:p-6">
+            <p className="text-xs md:text-sm text-muted-foreground">{t.cameras.offline}</p>
+            <p className="text-lg md:text-2xl font-bold mt-1 text-destructive">
               {(cameras?.length || 0) - onlineCount}
             </p>
           </div>
@@ -158,7 +158,7 @@ const Cameras = () => {
             <p>{t.cameras.noCameras}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {cameras?.map((camera) => (
               <Card key={camera.id} className="stat-card border-0 overflow-hidden">
                 {/* Camera Preview - Try iframe embed */}
@@ -256,36 +256,36 @@ const Cameras = () => {
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1 md:gap-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="w-full"
+                      className="w-full text-xs md:text-sm px-2 md:px-3"
                       disabled={!camera.camera_id || camera.status === 'offline'}
                       onClick={() => camera.camera_id && openCameraWeb(camera.camera_id)}
                     >
-                      <Monitor className="h-4 w-4 mr-2" />
-                      {language === 'bn' ? 'ওয়েব' : 'Web'}
+                      <Monitor className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                      <span className="hidden md:inline">{language === 'bn' ? 'ওয়েব' : 'Web'}</span>
                     </Button>
                     <Button 
                       variant="default" 
                       size="sm" 
-                      className="w-full"
+                      className="w-full text-xs md:text-sm px-2 md:px-3"
                       disabled={!camera.camera_id || camera.status === 'offline'}
                       onClick={() => camera.camera_id && openInVLC(camera.camera_id, camera.name)}
                     >
-                      <Play className="h-4 w-4 mr-2" />
-                      VLC
+                      <Play className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                      <span className="hidden md:inline">VLC</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="w-full"
+                      className="w-full text-xs md:text-sm px-2 md:px-3"
                       disabled={!camera.camera_id}
                       onClick={() => camera.camera_id && copyToClipboard(camera.camera_id)}
                     >
-                      <Smartphone className="h-4 w-4 mr-2" />
-                      {language === 'bn' ? 'অ্যাপ' : 'App'}
+                      <Smartphone className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                      <span className="hidden md:inline">{language === 'bn' ? 'অ্যাপ' : 'App'}</span>
                     </Button>
                   </div>
                   
