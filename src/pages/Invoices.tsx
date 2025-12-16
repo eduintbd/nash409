@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
-import { useInvoices, useUpdateInvoice } from '@/hooks/useInvoices';
+import { useInvoices, useUpdateInvoice, useDeleteInvoice, Invoice } from '@/hooks/useInvoices';
 import { useOwners } from '@/hooks/useOwners';
 import { useTenants } from '@/hooks/useTenants';
 import { useFlats } from '@/hooks/useFlats';
@@ -27,9 +27,25 @@ import {
 } from '@/components/ui/select';
 import { InvoiceForm } from '@/components/forms/InvoiceForm';
 import { ManualInvoiceForm } from '@/components/forms/ManualInvoiceForm';
-import { Search, Plus, FileText } from 'lucide-react';
+import { Search, Plus, FileText, MoreHorizontal, Check, Pencil, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const statusColors = {
   paid: 'bg-success/10 text-success border-success/20',
@@ -45,11 +61,15 @@ const Invoices = () => {
   const { data: tenants } = useTenants();
   const { data: flats } = useFlats();
   const updateInvoice = useUpdateInvoice();
+  const deleteInvoice = useDeleteInvoice();
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [manualFormOpen, setManualFormOpen] = useState(false);
+  const [editInvoice, setEditInvoice] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
 
   const statusLabels = {
     paid: t.invoices.statusPaid,
@@ -124,6 +144,19 @@ const Invoices = () => {
       status: 'paid',
       paid_date: new Date().toISOString().split('T')[0],
     });
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (invoiceToDelete) {
+      await deleteInvoice.mutateAsync(invoiceToDelete);
+      setDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+    }
+  };
+
+  const confirmDelete = (id: string) => {
+    setInvoiceToDelete(id);
+    setDeleteDialogOpen(true);
   };
 
   const locale = language === 'bn' ? 'bn-BD' : 'en-US';
@@ -242,20 +275,50 @@ const Invoices = () => {
                       </TableCell>
                       {(isAdmin || isOwner) && (
                         <TableCell className="text-right">
-                          {invoice.status !== 'paid' && canRecordPayment(invoice.flat_id) ? (
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleRecordPayment(invoice)}
-                              disabled={updateInvoice.isPending}
-                            >
-                              {t.invoices.recordPayment}
-                            </Button>
-                          ) : invoice.status === 'paid' ? (
-                            <span className="text-xs text-muted-foreground">
-                              {invoice.paid_date && new Date(invoice.paid_date).toLocaleDateString(locale)}
-                            </span>
-                          ) : null}
+                          {isAdmin ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {invoice.status !== 'paid' && (
+                                  <DropdownMenuItem onClick={() => handleRecordPayment(invoice)}>
+                                    <Check className="h-4 w-4 mr-2" />
+                                    {language === 'bn' ? 'অনুমোদন করুন' : 'Approve'}
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onClick={() => setEditInvoice(invoice)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  {language === 'bn' ? 'সম্পাদনা' : 'Edit'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => confirmDelete(invoice.id)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {language === 'bn' ? 'মুছুন' : 'Delete'}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            // Owner view - only record payment
+                            invoice.status !== 'paid' && canRecordPayment(invoice.flat_id) ? (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleRecordPayment(invoice)}
+                                disabled={updateInvoice.isPending}
+                              >
+                                {t.invoices.recordPayment}
+                              </Button>
+                            ) : invoice.status === 'paid' ? (
+                              <span className="text-xs text-muted-foreground">
+                                {invoice.paid_date && new Date(invoice.paid_date).toLocaleDateString(locale)}
+                              </span>
+                            ) : null
+                          )}
                         </TableCell>
                       )}
                     </TableRow>
@@ -268,7 +331,39 @@ const Invoices = () => {
       </div>
 
       <InvoiceForm open={formOpen} onOpenChange={setFormOpen} />
-      <ManualInvoiceForm open={manualFormOpen} onOpenChange={setManualFormOpen} />
+      <ManualInvoiceForm 
+        open={manualFormOpen || !!editInvoice} 
+        onOpenChange={(open) => {
+          setManualFormOpen(open);
+          if (!open) setEditInvoice(null);
+        }}
+        editData={editInvoice}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'bn' ? 'বিল মুছে ফেলতে চান?' : 'Delete Invoice?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'bn' 
+                ? 'এই বিলটি স্থায়ীভাবে মুছে ফেলা হবে। এই ক্রিয়াটি পূর্বাবস্থায় ফেরানো যাবে না।' 
+                : 'This invoice will be permanently deleted. This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{language === 'bn' ? 'বাতিল' : 'Cancel'}</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteInvoice}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {language === 'bn' ? 'মুছুন' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFlats } from '@/hooks/useFlats';
 import { useTenants } from '@/hooks/useTenants';
-import { useCreateInvoice } from '@/hooks/useInvoices';
+import { useCreateInvoice, useUpdateInvoice, Invoice } from '@/hooks/useInvoices';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,7 @@ import {
 interface ManualInvoiceFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editData?: any;
 }
 
 const months = [
@@ -37,12 +38,13 @@ const monthsBn = [
   'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps) => {
+export const ManualInvoiceForm = ({ open, onOpenChange, editData }: ManualInvoiceFormProps) => {
   const { t, language } = useLanguage();
   const { isAdmin, isOwner, userFlatIds } = useAuth();
   const { data: flats } = useFlats();
   const { data: tenants } = useTenants();
   const createInvoice = useCreateInvoice();
+  const updateInvoice = useUpdateInvoice();
 
   const currentDate = new Date();
   const [flatId, setFlatId] = useState('');
@@ -56,6 +58,37 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
       .split('T')[0]
   );
   const [description, setDescription] = useState('');
+  const [status, setStatus] = useState<'paid' | 'unpaid' | 'overdue'>('unpaid');
+
+  const isEditing = !!editData;
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editData) {
+      setFlatId(editData.flat_id || '');
+      setInvoiceType(editData.invoice_type || 'service_charge');
+      setMonth(editData.month || months[currentDate.getMonth()]);
+      setYear(editData.year || currentDate.getFullYear());
+      setAmount(editData.amount || 3000);
+      setDueDate(editData.due_date || '');
+      setDescription(editData.description || '');
+      setStatus(editData.status || 'unpaid');
+    } else {
+      // Reset form for new invoice
+      setFlatId('');
+      setInvoiceType('service_charge');
+      setMonth(months[currentDate.getMonth()]);
+      setYear(currentDate.getFullYear());
+      setAmount(3000);
+      setDueDate(
+        new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 10)
+          .toISOString()
+          .split('T')[0]
+      );
+      setDescription('');
+      setStatus('unpaid');
+    }
+  }, [editData]);
 
   // Filter flats based on user role
   // Admin sees all flats, Owner sees only their flats
@@ -74,8 +107,8 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
   }, [flatId, tenants]);
 
   const labels = language === 'en' ? {
-    title: isOwner ? 'Create Invoice for Tenant' : 'Add Invoice',
-    description: isOwner ? 'Create an invoice for your tenant' : 'Add a new invoice',
+    title: isEditing ? 'Edit Invoice' : (isOwner ? 'Create Invoice for Tenant' : 'Add Invoice'),
+    description: isEditing ? 'Update invoice details' : (isOwner ? 'Create an invoice for your tenant' : 'Add a new invoice'),
     selectFlat: 'Select Flat',
     invoiceType: 'Bill Type',
     rent: 'Rent',
@@ -87,12 +120,16 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
     amount: 'Amount (৳)',
     dueDate: 'Due Date',
     invoiceDescription: 'Description',
-    save: 'Create Invoice',
+    status: 'Status',
+    statusPaid: 'Paid',
+    statusUnpaid: 'Unpaid',
+    statusOverdue: 'Overdue',
+    save: isEditing ? 'Update Invoice' : 'Create Invoice',
     cancel: 'Cancel',
     noTenant: 'No tenant assigned',
   } : {
-    title: isOwner ? 'ভাড়াটিয়ার জন্য বিল তৈরি' : 'বিল যুক্ত করুন',
-    description: isOwner ? 'আপনার ভাড়াটিয়ার জন্য বিল তৈরি করুন' : 'নতুন বিল যুক্ত করুন',
+    title: isEditing ? 'বিল সম্পাদনা' : (isOwner ? 'ভাড়াটিয়ার জন্য বিল তৈরি' : 'বিল যুক্ত করুন'),
+    description: isEditing ? 'বিলের তথ্য আপডেট করুন' : (isOwner ? 'আপনার ভাড়াটিয়ার জন্য বিল তৈরি করুন' : 'নতুন বিল যুক্ত করুন'),
     selectFlat: 'ফ্ল্যাট নির্বাচন করুন',
     invoiceType: 'বিলের ধরন',
     rent: 'ভাড়া',
@@ -104,7 +141,11 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
     amount: 'পরিমাণ (৳)',
     dueDate: 'নির্ধারিত তারিখ',
     invoiceDescription: 'বিবরণ',
-    save: 'বিল তৈরি করুন',
+    status: 'স্ট্যাটাস',
+    statusPaid: 'পরিশোধিত',
+    statusUnpaid: 'অপরিশোধিত',
+    statusOverdue: 'মেয়াদোত্তীর্ণ',
+    save: isEditing ? 'আপডেট করুন' : 'বিল তৈরি করুন',
     cancel: 'বাতিল',
     noTenant: 'কোন ভাড়াটিয়া নেই',
   };
@@ -121,23 +162,34 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
       ? (language === 'en' ? 'Monthly Service Charge' : 'মাসিক সার্ভিস চার্জ')
       : null;
 
-    await createInvoice.mutateAsync({
-      flat_id: flatId,
-      month,
-      year,
-      amount,
-      due_date: dueDate,
-      status: 'unpaid',
-      paid_date: null,
-      description: description || defaultDescription,
-      invoice_type: invoiceType === 'other' ? 'service_charge' : invoiceType,
-    });
+    if (isEditing && editData?.id) {
+      await updateInvoice.mutateAsync({
+        id: editData.id,
+        flat_id: flatId,
+        month,
+        year,
+        amount,
+        due_date: dueDate,
+        status,
+        paid_date: status === 'paid' ? (editData.paid_date || new Date().toISOString().split('T')[0]) : null,
+        description: description || defaultDescription,
+        invoice_type: invoiceType === 'other' ? 'service_charge' : invoiceType,
+      });
+    } else {
+      await createInvoice.mutateAsync({
+        flat_id: flatId,
+        month,
+        year,
+        amount,
+        due_date: dueDate,
+        status: 'unpaid',
+        paid_date: null,
+        description: description || defaultDescription,
+        invoice_type: invoiceType === 'other' ? 'service_charge' : invoiceType,
+      });
+    }
 
     onOpenChange(false);
-    // Reset form
-    setFlatId('');
-    setDescription('');
-    setInvoiceType('service_charge');
   };
 
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i);
@@ -255,11 +307,29 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
               placeholder={language === 'en' ? 'Monthly Rent / Service Charge' : 'মাসিক ভাড়া / সার্ভিস চার্জ'}
             />
           </div>
+
+          {/* Status field - only shown when editing */}
+          {isEditing && (
+            <div className="space-y-2">
+              <Label>{labels.status}</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as 'paid' | 'unpaid' | 'overdue')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unpaid">{labels.statusUnpaid}</SelectItem>
+                  <SelectItem value="paid">{labels.statusPaid}</SelectItem>
+                  <SelectItem value="overdue">{labels.statusOverdue}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {labels.cancel}
             </Button>
-            <Button type="submit" disabled={createInvoice.isPending || !flatId}>
+            <Button type="submit" disabled={(createInvoice.isPending || updateInvoice.isPending) || !flatId}>
               {labels.save}
             </Button>
           </div>
