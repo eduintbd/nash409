@@ -4,8 +4,10 @@ import { Header } from '@/components/layout/Header';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOwners } from '@/hooks/useOwners';
-import { useTenants, useUpdateTenant, useDeleteTenant } from '@/hooks/useTenants';
-import { useFlats } from '@/hooks/useFlats';
+import { useTenants, useDeleteTenant } from '@/hooks/useTenants';
+import { useFlats, Flat } from '@/hooks/useFlats';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +25,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const MyTenant = () => {
   const { user } = useAuth();
@@ -35,22 +44,50 @@ const MyTenant = () => {
   const [tenantFormOpen, setTenantFormOpen] = useState(false);
   const [editTenant, setEditTenant] = useState<any>(null);
   const [deleteModal, setDeleteModal] = useState<string | null>(null);
+  const [selectedFlatId, setSelectedFlatId] = useState<string | null>(null);
 
   // Find the owner record for the current user
   const myOwnerRecord = useMemo(() => {
     return owners?.find(o => o.user_id === user?.id);
   }, [owners, user?.id]);
 
-  // Find the flat owned by this user
-  const myFlat = useMemo(() => {
-    return flats?.find(f => f.id === myOwnerRecord?.flat_id);
-  }, [flats, myOwnerRecord?.flat_id]);
+  // Fetch all flats owned by this owner via owner_flats junction table
+  const { data: ownerFlats, isLoading: loadingOwnerFlats } = useQuery({
+    queryKey: ['owner_flats', myOwnerRecord?.id],
+    queryFn: async () => {
+      if (!myOwnerRecord?.id) return [];
+      const { data, error } = await supabase
+        .from('owner_flats')
+        .select('flat_id')
+        .eq('owner_id', myOwnerRecord.id);
+      if (error) throw error;
+      return data?.map(of => of.flat_id) || [];
+    },
+    enabled: !!myOwnerRecord?.id,
+  });
 
-  // Find tenant for this owner's flat
+  // Get flat details for owned flats
+  const myFlats = useMemo(() => {
+    if (!ownerFlats || !flats) return [];
+    return flats.filter(f => ownerFlats.includes(f.id));
+  }, [flats, ownerFlats]);
+
+  // Set default selected flat
+  useMemo(() => {
+    if (myFlats.length > 0 && !selectedFlatId) {
+      setSelectedFlatId(myFlats[0].id);
+    }
+  }, [myFlats, selectedFlatId]);
+
+  const selectedFlat = useMemo(() => {
+    return myFlats.find(f => f.id === selectedFlatId);
+  }, [myFlats, selectedFlatId]);
+
+  // Find tenant for selected flat
   const myTenant = useMemo(() => {
-    if (!myOwnerRecord?.flat_id) return null;
-    return tenants?.find(t => t.flat_id === myOwnerRecord.flat_id);
-  }, [tenants, myOwnerRecord?.flat_id]);
+    if (!selectedFlatId) return null;
+    return tenants?.find(t => t.flat_id === selectedFlatId);
+  }, [tenants, selectedFlatId]);
 
   const locale = language === 'bn' ? 'bn-BD' : 'en-US';
 
@@ -80,9 +117,10 @@ const MyTenant = () => {
     cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
     delete: language === 'bn' ? 'মুছুন' : 'Delete',
     perMonth: language === 'bn' ? '/মাস' : '/month',
+    selectFlat: language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Select Flat',
   };
 
-  const isLoading = loadingOwners || loadingTenants;
+  const isLoading = loadingOwners || loadingTenants || loadingOwnerFlats;
 
   if (isLoading) {
     return (
@@ -95,7 +133,7 @@ const MyTenant = () => {
     );
   }
 
-  if (!myOwnerRecord || !myFlat) {
+  if (!myOwnerRecord || myFlats.length === 0) {
     return (
       <MainLayout>
         <Header title={t.title} subtitle={t.subtitle} />
@@ -116,12 +154,27 @@ const MyTenant = () => {
       <Header title={t.title} subtitle={t.subtitle} />
       
       <div className="p-6 space-y-6 animate-fade-in">
-        {/* Flat Info */}
+        {/* Flat Selector */}
         <Card className="max-w-lg">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Home className="h-4 w-4" />
-              {t.flat}: {myFlat.flat_number}
+              {myFlats.length > 1 ? (
+                <Select value={selectedFlatId || ''} onValueChange={setSelectedFlatId}>
+                  <SelectTrigger className="w-[180px] h-8">
+                    <SelectValue placeholder={t.selectFlat} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {myFlats.map((flat) => (
+                      <SelectItem key={flat.id} value={flat.id}>
+                        {t.flat} {flat.flat_number}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span>{t.flat}: {selectedFlat?.flat_number}</span>
+              )}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -209,7 +262,7 @@ const MyTenant = () => {
         open={tenantFormOpen} 
         onOpenChange={setTenantFormOpen} 
         editData={editTenant}
-        preselectedFlatId={myFlat.id}
+        preselectedFlatId={selectedFlatId || ''}
       />
 
       <AlertDialog open={!!deleteModal} onOpenChange={() => setDeleteModal(null)}>
