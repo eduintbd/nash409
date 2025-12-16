@@ -11,11 +11,13 @@ interface AuthContextType {
   isAdmin: boolean;
   isOwner: boolean;
   isTenant: boolean;
+  isApproved: boolean;
   userRole: AppRole | null;
   userFlatId: string | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  refreshUserRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isTenant, setIsTenant] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [userFlatId, setUserFlatId] = useState<string | null>(null);
 
@@ -34,11 +37,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Check user_roles table first
     const { data: roleData } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role, is_approved')
       .eq('user_id', userId)
       .maybeSingle();
     
     let role = roleData?.role as AppRole | null;
+    const approved = roleData?.is_approved ?? false;
+    setIsApproved(approved);
     let flatId: string | null = null;
 
     // If no explicit role or role is 'user', check if user is owner/tenant by user_id or email
@@ -130,6 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsAdmin(false);
           setIsOwner(false);
           setIsTenant(false);
+          setIsApproved(false);
           setUserRole(null);
           setUserFlatId(null);
         }
@@ -175,16 +181,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAdmin(false);
     setIsOwner(false);
     setIsTenant(false);
+    setIsApproved(false);
     setUserRole(null);
     setUserFlatId(null);
 
     if (error) throw error;
   };
 
+  const refreshUserRole = async () => {
+    if (user) {
+      await checkUserRole(user.id, user.email);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
-      user, session, isLoading, isAdmin, isOwner, isTenant, userRole, userFlatId, 
-      signIn, signUp, signOut 
+      user, session, isLoading, isAdmin, isOwner, isTenant, isApproved, userRole, userFlatId, 
+      signIn, signUp, signOut, refreshUserRole 
     }}>
       {children}
     </AuthContext.Provider>

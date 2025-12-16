@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,25 +17,33 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useFlats } from '@/hooks/useFlats';
-import { useOwners } from '@/hooks/useOwners';
-import { useTenants } from '@/hooks/useTenants';
 import { Building2, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
+type SignupRole = 'owner' | 'tenant' | 'employee';
+
 const Auth = () => {
-  const { user, signIn, signUp, isLoading } = useAuth();
+  const { user, signIn, isLoading } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
+  const { data: flats } = useFlats();
   
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
+  const [signupRole, setSignupRole] = useState<SignupRole | ''>('');
+  const [signupFlatId, setSignupFlatId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Get available flats for owner/tenant selection
+  const availableFlatsForOwner = flats?.filter(f => f.status === 'vacant') || [];
+  const availableFlatsForTenant = flats?.filter(f => f.status === 'owner-occupied' || f.status === 'vacant') || [];
 
   useEffect(() => {
     if (user) {
@@ -81,7 +89,12 @@ const Auth = () => {
     try {
       emailSchema.parse(signupEmail);
       passwordSchema.parse(signupPassword);
-      if (!signupName.trim()) throw new Error('Name is required');
+      if (!signupName.trim()) throw new Error(language === 'bn' ? 'নাম প্রয়োজন' : 'Name is required');
+      if (!signupRole) throw new Error(language === 'bn' ? 'ভূমিকা নির্বাচন করুন' : 'Please select a role');
+      if (!signupPhone.trim()) throw new Error(language === 'bn' ? 'ফোন নম্বর প্রয়োজন' : 'Phone number is required');
+      if ((signupRole === 'owner' || signupRole === 'tenant') && !signupFlatId) {
+        throw new Error(language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Please select a flat');
+      }
     } catch (err) {
       const message = err instanceof z.ZodError ? err.errors[0].message : (err as Error).message;
       toast({ 
@@ -93,10 +106,24 @@ const Auth = () => {
     }
 
     setIsSubmitting(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
-    setIsSubmitting(false);
+    
+    // Sign up with metadata including requested role and flat info
+    const { data, error } = await supabase.auth.signUp({
+      email: signupEmail,
+      password: signupPassword,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+        data: { 
+          full_name: signupName,
+          requested_role: signupRole,
+          phone: signupPhone,
+          flat_id: signupFlatId || null
+        }
+      }
+    });
 
     if (error) {
+      setIsSubmitting(false);
       const errorMessage = error.message.includes('already registered') 
         ? (language === 'bn' ? 'এই ইমেইল ইতিমধ্যে নিবন্ধিত' : 'This email is already registered')
         : error.message;
@@ -105,9 +132,24 @@ const Auth = () => {
         description: errorMessage, 
         variant: 'destructive' 
       });
-    } else {
-      toast({ title: language === 'bn' ? 'অ্যাকাউন্ট তৈরি হয়েছে!' : 'Account created!' });
+      return;
     }
+
+    setIsSubmitting(false);
+    toast({ 
+      title: language === 'bn' ? 'অ্যাকাউন্ট তৈরি হয়েছে!' : 'Account created!',
+      description: language === 'bn' 
+        ? 'অ্যাডমিন অনুমোদনের জন্য অপেক্ষা করুন।' 
+        : 'Please wait for admin approval.',
+    });
+    
+    // Clear form
+    setSignupEmail('');
+    setSignupPassword('');
+    setSignupName('');
+    setSignupPhone('');
+    setSignupRole('');
+    setSignupFlatId('');
   };
 
   if (isLoading) {
@@ -171,8 +213,27 @@ const Auth = () => {
             
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
+                {/* Role Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">{language === 'bn' ? 'নাম' : 'Full Name'}</Label>
+                  <Label>{language === 'bn' ? 'আমি একজন' : 'I am a'}</Label>
+                  <Select value={signupRole} onValueChange={(v) => {
+                    setSignupRole(v as SignupRole);
+                    setSignupFlatId(''); // Reset flat selection when role changes
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={language === 'bn' ? 'ভূমিকা নির্বাচন করুন' : 'Select role'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="owner">{language === 'bn' ? 'ফ্ল্যাট মালিক' : 'Flat Owner'}</SelectItem>
+                      <SelectItem value="tenant">{language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant'}</SelectItem>
+                      <SelectItem value="employee">{language === 'bn' ? 'কর্মচারী' : 'Employee'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Common Fields */}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">{language === 'bn' ? 'পুরো নাম' : 'Full Name'}</Label>
                   <Input
                     id="signup-name"
                     type="text"
@@ -181,6 +242,19 @@ const Auth = () => {
                     required
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">{language === 'bn' ? 'ফোন নম্বর' : 'Phone Number'}</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(e.target.value)}
+                    placeholder="01XXXXXXXXX"
+                    required
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">{language === 'bn' ? 'ইমেইল' : 'Email'}</Label>
                   <Input
@@ -192,6 +266,7 @@ const Auth = () => {
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">{language === 'bn' ? 'পাসওয়ার্ড' : 'Password'}</Label>
                   <Input
@@ -203,10 +278,42 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
+
+                {/* Flat Selection for Owner/Tenant */}
+                {(signupRole === 'owner' || signupRole === 'tenant') && (
+                  <div className="space-y-2">
+                    <Label>{language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Select Flat'}</Label>
+                    <Select value={signupFlatId} onValueChange={setSignupFlatId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Select flat'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(signupRole === 'owner' ? availableFlatsForOwner : availableFlatsForTenant).map((flat) => (
+                          <SelectItem key={flat.id} value={flat.id}>
+                            {language === 'bn' ? `ফ্ল্যাট ${flat.flat_number}` : `Flat ${flat.flat_number}`} 
+                            {flat.status !== 'vacant' && ` (${flat.status})`}
+                          </SelectItem>
+                        ))}
+                        {(signupRole === 'owner' ? availableFlatsForOwner : availableFlatsForTenant).length === 0 && (
+                          <SelectItem value="" disabled>
+                            {language === 'bn' ? 'কোন ফ্ল্যাট উপলব্ধ নেই' : 'No flats available'}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full" disabled={isSubmitting || !signupRole}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {language === 'bn' ? 'নিবন্ধন' : 'Sign Up'}
                 </Button>
+                
+                <p className="text-xs text-muted-foreground text-center">
+                  {language === 'bn' 
+                    ? 'নিবন্ধনের পর অ্যাডমিন অনুমোদন প্রয়োজন' 
+                    : 'Admin approval required after registration'}
+                </p>
               </form>
             </TabsContent>
           </Tabs>

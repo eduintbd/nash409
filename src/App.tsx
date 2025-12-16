@@ -16,6 +16,8 @@ import Cameras from "./pages/Cameras";
 import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import PendingApproval from "./pages/PendingApproval";
+import UserApprovals from "./pages/UserApprovals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +33,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/pending-approval" element={<PendingApproval />} />
+              <Route path="/user-approvals" element={<UserApprovals />} />
               <Route path="/flats" element={<Flats />} />
               <Route path="/residents" element={<Residents />} />
               <Route path="/employees" element={<Employees />} />
