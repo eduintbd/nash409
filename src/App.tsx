@@ -18,6 +18,7 @@ import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import PendingApproval from "./pages/PendingApproval";
 import UserApprovals from "./pages/UserApprovals";
+import TenantApprovals from "./pages/TenantApprovals";
 import MyTenant from "./pages/MyTenant";
 import TenantAgreement from "./pages/TenantAgreement";
 import NotFound from "./pages/NotFound";
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/user-approvals" element={<UserApprovals />} />
+              <Route path="/tenant-approvals" element={<TenantApprovals />} />
               <Route path="/flats" element={<Flats />} />
               <Route path="/my-tenant" element={<MyTenant />} />
               <Route path="/residents" element={<Residents />} />

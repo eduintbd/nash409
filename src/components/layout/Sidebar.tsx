@@ -36,11 +36,12 @@ export function Sidebar() {
     { name: language === 'bn' ? 'ব্যবহারকারী অনুমোদন' : 'User Approvals', href: '/user-approvals', icon: UserCheck },
   ];
 
-  // Limited navigation for owners (can see building expenses + flats + manage tenant)
+  // Limited navigation for owners (can see building expenses + flats + manage tenant + approve tenants)
   const ownerNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
     { name: language === 'bn' ? 'আমার ভাড়াটিয়া' : 'My Tenant', href: '/my-tenant', icon: UserPlus },
+    { name: language === 'bn' ? 'ভাড়াটিয়া অনুমোদন' : 'Tenant Approvals', href: '/tenant-approvals', icon: UserCheck },
     { name: t.nav.invoices, href: '/invoices', icon: Receipt },
     { name: t.nav.expenses, href: '/expenses', icon: Wallet },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },

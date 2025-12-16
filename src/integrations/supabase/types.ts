@@ -231,6 +231,42 @@ export type Database = {
           },
         ]
       }
+      owner_flats: {
+        Row: {
+          created_at: string
+          flat_id: string
+          id: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          flat_id: string
+          id?: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          flat_id?: string
+          id?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_flats_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_flats_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owners: {
         Row: {
           created_at: string
@@ -489,6 +525,7 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          approved_by_owner_id: string | null
           created_at: string
           id: string
           is_approved: boolean
@@ -497,6 +534,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approved_by_owner_id?: string | null
           created_at?: string
           id?: string
           is_approved?: boolean
@@ -505,6 +543,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approved_by_owner_id?: string | null
           created_at?: string
           id?: string
           is_approved?: boolean
@@ -512,7 +551,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_approved_by_owner_id_fkey"
+            columns: ["approved_by_owner_id"]
+            isOneToOne: false
+            referencedRelation: "owners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -524,6 +571,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_owner_of_flat: {
+        Args: { _flat_id: string; _user_id: string }
         Returns: boolean
       }
     }
