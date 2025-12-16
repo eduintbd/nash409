@@ -36,7 +36,7 @@ export function Sidebar() {
     { name: language === 'bn' ? 'ব্যবহারকারী অনুমোদন' : 'User Approvals', href: '/user-approvals', icon: UserCheck },
   ];
 
-  // Limited navigation for owners (can see building expenses + flats + manage tenant + approve tenants)
+  // Limited navigation for owners (can see building expenses + flats + manage tenant + approve tenants + cameras)
   const ownerNavigation = [
     { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
@@ -45,6 +45,7 @@ export function Sidebar() {
     { name: t.nav.invoices, href: '/invoices', icon: Receipt },
     { name: t.nav.expenses, href: '/expenses', icon: Wallet },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
+    { name: t.nav.cameras, href: '/cameras', icon: Camera },
   ];
 
   // Minimal navigation for tenants (only their stuff)
