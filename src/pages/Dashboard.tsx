@@ -8,10 +8,11 @@ import { useEmployees } from '@/hooks/useEmployees';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Building2, Users, Receipt, Wrench, TrendingUp, TrendingDown, Home } from 'lucide-react';
+import { Building2, Users, Receipt, Wrench, TrendingUp, TrendingDown, Home, Wallet } from 'lucide-react';
 import { formatBDT } from '@/lib/currency';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { OwnerPaymentChart } from '@/components/dashboard/OwnerPaymentChart';
 
 const Dashboard = () => {
   const { t, language } = useLanguage();
@@ -55,9 +56,32 @@ const Dashboard = () => {
   const totalIncome = invoices?.filter(i => i.status === 'paid' && (i as any).invoice_type !== 'service_request').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
   const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
   
+  // Get current month/year for filtering
+  const currentMonth = new Date().toLocaleString('en', { month: 'long' });
+  const currentYear = new Date().getFullYear();
+  
   // Owner rental income (from their flats only)
   const ownerRentalIncome = userInvoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
   const ownerPendingRent = userInvoices?.filter(i => i.status !== 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
+  
+  // Owner monthly stats (current month)
+  const ownerCurrentMonthInvoices = userInvoices?.filter(i => 
+    i.month === currentMonth && i.year === currentYear
+  );
+  const ownerMonthlyRentIncome = ownerCurrentMonthInvoices?.filter(i => 
+    i.status === 'paid' && (i as any).invoice_type === 'rent'
+  ).reduce((sum, i) => sum + Number(i.amount), 0) || 0;
+  const ownerMonthlyRentDue = ownerCurrentMonthInvoices?.filter(i => 
+    i.status !== 'paid' && (i as any).invoice_type === 'rent'
+  ).reduce((sum, i) => sum + Number(i.amount), 0) || 0;
+  
+  // Owner service charge stats (what they pay as building maintenance)
+  const ownerServiceChargePaid = userInvoices?.filter(i => 
+    i.status === 'paid' && (i as any).invoice_type === 'service_charge'
+  ).reduce((sum, i) => sum + Number(i.amount), 0) || 0;
+  const ownerServiceChargePending = userInvoices?.filter(i => 
+    i.status !== 'paid' && (i as any).invoice_type === 'service_charge'
+  ).reduce((sum, i) => sum + Number(i.amount), 0) || 0;
   
   // Tenant pending
   const pendingAmount = userInvoices?.filter(i => i.status !== 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
@@ -174,10 +198,10 @@ const Dashboard = () => {
           subtitle={language === 'bn' ? 'ফ্ল্যাট মালিকের প্যানেল' : 'Flat Owner Panel'}
         />
         
-        <div className="p-6 space-y-6 animate-fade-in">
+        <div className="p-4 md:p-6 space-y-6 animate-fade-in">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-32" />)}
             </div>
           ) : (
             <>
@@ -205,18 +229,18 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Rental Income Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Monthly Rent Stats (Current Month) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <Card className="stat-card border-0 bg-success/5">
                   <CardHeader className="pb-2">
                     <CardDescription className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-success" />
-                      {language === 'bn' ? 'ভাড়া আয়' : 'Rental Income'}
+                      {language === 'bn' ? `${currentMonth} মাসের ভাড়া আয়` : `${currentMonth} Rent Income`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-3xl font-bold text-success">{formatBDT(ownerRentalIncome)}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'পরিশোধিত বিল থেকে' : 'From paid invoices'}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-success">{formatBDT(ownerMonthlyRentIncome)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'এই মাসে প্রাপ্ত' : 'Received this month'}</p>
                   </CardContent>
                 </Card>
                 
@@ -224,11 +248,69 @@ const Dashboard = () => {
                   <CardHeader className="pb-2">
                     <CardDescription className="flex items-center gap-2">
                       <Receipt className="h-4 w-4 text-warning" />
-                      {language === 'bn' ? 'বকেয়া ভাড়া' : 'Pending Rent'}
+                      {language === 'bn' ? `${currentMonth} মাসের বকেয়া ভাড়া` : `${currentMonth} Rent Due`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-3xl font-bold text-warning">{formatBDT(ownerPendingRent)}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-warning">{formatBDT(ownerMonthlyRentDue)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'এই মাসে বকেয়া' : 'Pending this month'}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Service Charge Stats (Owner's Expenses) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <Card className="stat-card border-0 bg-emerald-500/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-emerald-600" />
+                      {language === 'bn' ? 'পরিশোধিত সার্ভিস চার্জ' : 'Paid Service Charge'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">{formatBDT(ownerServiceChargePaid)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'মোট পরিশোধিত' : 'Total paid'}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="stat-card border-0 bg-orange-500/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-orange-600" />
+                      {language === 'bn' ? 'বকেয়া সার্ভিস চার্জ' : 'Pending Service Charge'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl md:text-3xl font-bold text-orange-600">{formatBDT(ownerServiceChargePending)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'বকেয়া পরিমাণ' : 'Amount pending'}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Overall Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <Card className="stat-card border-0 bg-success/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-success" />
+                      {language === 'bn' ? 'মোট ভাড়া আয়' : 'Total Rental Income'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl md:text-3xl font-bold text-success">{formatBDT(ownerRentalIncome)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'সকল পরিশোধিত বিল' : 'All time paid'}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="stat-card border-0 bg-warning/5">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-warning" />
+                      {language === 'bn' ? 'মোট বকেয়া' : 'Total Pending'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl md:text-3xl font-bold text-warning">{formatBDT(ownerPendingRent)}</p>
                     <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {language === 'bn' ? 'বিল বকেয়া' : 'invoices pending'}</p>
                   </CardContent>
                 </Card>
@@ -241,14 +323,19 @@ const Dashboard = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-3xl font-bold text-destructive">{openRequests}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-destructive">{openRequests}</p>
                     <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'চলমান অনুরোধ' : 'Open requests'}</p>
                   </CardContent>
                 </Card>
               </div>
 
+              {/* Payment History Chart */}
+              {userInvoices && userInvoices.length > 0 && (
+                <OwnerPaymentChart invoices={userInvoices as any} language={language} />
+              )}
+
               {/* Invoice Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <StatCard
                   title={language === 'bn' ? 'মোট বিল' : 'Total Invoices'}
                   value={userInvoices?.length || 0}
