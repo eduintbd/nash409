@@ -76,9 +76,11 @@ const Flats = () => {
     'vacant': t.flats.statusVacant,
   };
 
+  // Filter out flats without building_name (blank info) and apply search
   const filteredFlats = flats?.filter(flat => 
-    flat.flat_number.toLowerCase().includes(search.toLowerCase()) ||
-    flat.building_name?.toLowerCase().includes(search.toLowerCase())
+    flat.building_name && // Only include flats with a building name
+    (flat.flat_number.toLowerCase().includes(search.toLowerCase()) ||
+    flat.building_name.toLowerCase().includes(search.toLowerCase()))
   ) || [];
 
   // Group owner flats by owner for admin view
