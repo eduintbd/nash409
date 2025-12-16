@@ -46,6 +46,7 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
 
   const currentDate = new Date();
   const [flatId, setFlatId] = useState('');
+  const [invoiceType, setInvoiceType] = useState<'rent' | 'other'>('rent');
   const [month, setMonth] = useState(months[currentDate.getMonth()]);
   const [year, setYear] = useState(currentDate.getFullYear());
   const [amount, setAmount] = useState(3000);
@@ -55,7 +56,6 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
       .split('T')[0]
   );
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<'unpaid' | 'paid'>('unpaid');
 
   // Filter flats based on user role
   // Admin sees all flats, Owner sees only their flats
@@ -77,15 +77,15 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
     title: isOwner ? 'Create Invoice for Tenant' : 'Add Invoice',
     description: isOwner ? 'Create an invoice for your tenant' : 'Add a new invoice',
     selectFlat: 'Select Flat',
+    invoiceType: 'Invoice Type',
+    rent: 'Rent',
+    other: 'Other',
     tenant: 'Tenant',
     month: 'Month',
     year: 'Year',
     amount: 'Amount (৳)',
     dueDate: 'Due Date',
     invoiceDescription: 'Description',
-    status: 'Status',
-    unpaid: 'Unpaid',
-    paid: 'Paid',
     save: 'Create Invoice',
     cancel: 'Cancel',
     noTenant: 'No tenant assigned',
@@ -93,15 +93,15 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
     title: isOwner ? 'ভাড়াটিয়ার জন্য বিল তৈরি' : 'বিল যুক্ত করুন',
     description: isOwner ? 'আপনার ভাড়াটিয়ার জন্য বিল তৈরি করুন' : 'নতুন বিল যুক্ত করুন',
     selectFlat: 'ফ্ল্যাট নির্বাচন করুন',
+    invoiceType: 'বিলের ধরন',
+    rent: 'ভাড়া',
+    other: 'অন্যান্য',
     tenant: 'ভাড়াটিয়া',
     month: 'মাস',
     year: 'বছর',
     amount: 'পরিমাণ (৳)',
     dueDate: 'নির্ধারিত তারিখ',
     invoiceDescription: 'বিবরণ',
-    status: 'অবস্থা',
-    unpaid: 'বকেয়া',
-    paid: 'পরিশোধিত',
     save: 'বিল তৈরি করুন',
     cancel: 'বাতিল',
     noTenant: 'কোন ভাড়াটিয়া নেই',
@@ -119,16 +119,16 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
       year,
       amount,
       due_date: dueDate,
-      status,
-      paid_date: status === 'paid' ? new Date().toISOString().split('T')[0] : null,
-      description: description || null,
+      status: 'unpaid',
+      paid_date: null,
+      description: description || (invoiceType === 'rent' ? (language === 'en' ? 'Monthly Rent' : 'মাসিক ভাড়া') : null),
     });
 
     onOpenChange(false);
     // Reset form
     setFlatId('');
     setDescription('');
-    setStatus('unpaid');
+    setInvoiceType('rent');
   };
 
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i);
@@ -153,6 +153,19 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
                     {flat.flat_number} {flat.status === 'tenant' && '(Tenant)'}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{labels.invoiceType}</Label>
+            <Select value={invoiceType} onValueChange={(v) => setInvoiceType(v as 'rent' | 'other')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rent">{labels.rent}</SelectItem>
+                <SelectItem value="other">{labels.other}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -232,20 +245,6 @@ export const ManualInvoiceForm = ({ open, onOpenChange }: ManualInvoiceFormProps
               placeholder={language === 'en' ? 'Monthly Rent / Service Charge' : 'মাসিক ভাড়া / সার্ভিস চার্জ'}
             />
           </div>
-
-          <div className="space-y-2">
-            <Label>{labels.status}</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as 'unpaid' | 'paid')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unpaid">{labels.unpaid}</SelectItem>
-                <SelectItem value="paid">{labels.paid}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {labels.cancel}
