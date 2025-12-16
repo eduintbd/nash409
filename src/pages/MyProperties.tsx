@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Plus, Pencil, Trash2, Home } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building2, Plus, Pencil, Trash2, Home, BarChart3 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { PropertyAnalytics } from '@/components/dashboard/PropertyAnalytics';
 
 export default function MyProperties() {
   const { language } = useLanguage();
@@ -66,6 +68,8 @@ export default function MyProperties() {
     confirmRemove: language === 'bn' ? 'সরানো নিশ্চিত করুন' : 'Confirm Remove',
     removeMessage: language === 'bn' ? 'আপনি কি এই সম্পত্তি সরাতে চান?' : 'Are you sure you want to remove this property from your portfolio?',
     sqft: language === 'bn' ? 'বর্গফুট' : 'sq ft',
+    myProperties: language === 'bn' ? 'আমার সম্পত্তি' : 'My Properties',
+    analytics: language === 'bn' ? 'বিশ্লেষণ' : 'Analytics',
   };
 
   // Get owner ID from ownerFlats data
@@ -146,6 +150,9 @@ export default function MyProperties() {
     }
   };
 
+  // Extract flats for analytics
+  const ownerFlatsData = ownerFlats.map((of: any) => of.flats).filter(Boolean);
+
   return (
     <MainLayout>
       <Header 
@@ -153,228 +160,249 @@ export default function MyProperties() {
         subtitle={t.subtitle}
       />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{totalProperties}</p>
-                <p className="text-sm text-muted-foreground">{t.totalProperties}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Home className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{totalSize.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">{t.totalSize} ({t.sqft})</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-xl font-bold text-primary">{ownerOccupied}</p>
-              <p className="text-sm text-muted-foreground">{t.occupiedByOwner}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-xl font-bold text-green-600">{rented}</p>
-              <p className="text-sm text-muted-foreground">{t.rentedOut}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <div className="p-6 space-y-6 animate-fade-in">
+        <Tabs defaultValue="my-properties" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="my-properties">
+              <Building2 className="h-4 w-4 mr-2" />
+              {t.myProperties}
+            </TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              {t.analytics}
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {t.addNew}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.addNew}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <Label>{t.buildingName}</Label>
-                <Input
-                  value={newFlatData.building_name}
-                  onChange={(e) => setNewFlatData({ ...newFlatData, building_name: e.target.value })}
-                  placeholder="e.g., Green Valley Tower, Dhaka"
-                />
-              </div>
-              <div>
-                <Label>{t.flatNumber}</Label>
-                <Input
-                  value={newFlatData.flat_number}
-                  onChange={(e) => setNewFlatData({ ...newFlatData, flat_number: e.target.value })}
-                  placeholder="e.g., 3A"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>{t.floor}</Label>
-                  <Input
-                    type="number"
-                    value={newFlatData.floor}
-                    onChange={(e) => setNewFlatData({ ...newFlatData, floor: parseInt(e.target.value) })}
-                  />
-                </div>
-                <div>
-                  <Label>{t.size}</Label>
-                  <Input
-                    type="number"
-                    value={newFlatData.size}
-                    onChange={(e) => setNewFlatData({ ...newFlatData, size: parseInt(e.target.value) })}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>{t.parking}</Label>
-                <Input
-                  value={newFlatData.parking_spot}
-                  onChange={(e) => setNewFlatData({ ...newFlatData, parking_spot: e.target.value })}
-                  placeholder="e.g., P-3"
-                />
-              </div>
-              <div>
-                <Label>{t.status}</Label>
-                <Select
-                  value={newFlatData.status}
-                  onValueChange={(value: any) => setNewFlatData({ ...newFlatData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="owner-occupied">{t.occupiedByOwner}</SelectItem>
-                    <SelectItem value="vacant">{t.vacant}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddDialog(false)}>{t.cancel}</Button>
-                <Button onClick={handleCreateFlat} disabled={!newFlatData.flat_number}>
-                  {t.save}
-                </Button>
-              </div>
+          <TabsContent value="my-properties" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Building2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{totalProperties}</p>
+                      <p className="text-sm text-muted-foreground">{t.totalProperties}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-500/10">
+                      <Home className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{totalSize.toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">{t.totalSize} ({t.sqft})</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-primary">{ownerOccupied}</p>
+                    <p className="text-sm text-muted-foreground">{t.occupiedByOwner}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-green-600">{rented}</p>
+                    <p className="text-sm text-muted-foreground">{t.rentedOut}</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </DialogContent>
-        </Dialog>
 
-        {availableFlats.length > 0 && (
-          <Dialog open={showAddExistingDialog} onOpenChange={setShowAddExistingDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Building2 className="h-4 w-4 mr-2" />
-                {t.addExisting}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t.addExisting}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <Label>{t.selectFlat}</Label>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {availableFlats.map((flat) => (
-                    <Button
-                      key={flat.id}
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => handleAddExistingFlat(flat.id)}
-                    >
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t.addNew}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{t.addNew}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <Label>{t.buildingName}</Label>
+                      <Input
+                        value={newFlatData.building_name}
+                        onChange={(e) => setNewFlatData({ ...newFlatData, building_name: e.target.value })}
+                        placeholder="e.g., Green Valley Tower, Dhaka"
+                      />
+                    </div>
+                    <div>
+                      <Label>{t.flatNumber}</Label>
+                      <Input
+                        value={newFlatData.flat_number}
+                        onChange={(e) => setNewFlatData({ ...newFlatData, flat_number: e.target.value })}
+                        placeholder="e.g., 3A"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>{t.floor}</Label>
+                        <Input
+                          type="number"
+                          value={newFlatData.floor}
+                          onChange={(e) => setNewFlatData({ ...newFlatData, floor: parseInt(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label>{t.size}</Label>
+                        <Input
+                          type="number"
+                          value={newFlatData.size}
+                          onChange={(e) => setNewFlatData({ ...newFlatData, size: parseInt(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>{t.parking}</Label>
+                      <Input
+                        value={newFlatData.parking_spot}
+                        onChange={(e) => setNewFlatData({ ...newFlatData, parking_spot: e.target.value })}
+                        placeholder="e.g., P-3"
+                      />
+                    </div>
+                    <div>
+                      <Label>{t.status}</Label>
+                      <Select
+                        value={newFlatData.status}
+                        onValueChange={(value: any) => setNewFlatData({ ...newFlatData, status: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="owner-occupied">{t.occupiedByOwner}</SelectItem>
+                          <SelectItem value="vacant">{t.vacant}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setShowAddDialog(false)}>{t.cancel}</Button>
+                      <Button onClick={handleCreateFlat} disabled={!newFlatData.flat_number}>
+                        {t.save}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {availableFlats.length > 0 && (
+                <Dialog open={showAddExistingDialog} onOpenChange={setShowAddExistingDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
                       <Building2 className="h-4 w-4 mr-2" />
-                      {flat.flat_number} - Floor {flat.floor} ({flat.size} {t.sqft})
+                      {t.addExisting}
                     </Button>
-                  ))}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
-
-      {/* Properties Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-center py-8 text-muted-foreground">Loading...</p>
-          ) : ownerFlats.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">{t.noProperties}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.buildingName}</TableHead>
-                    <TableHead>{t.flatNumber}</TableHead>
-                    <TableHead>{t.floor}</TableHead>
-                    <TableHead>{t.size}</TableHead>
-                    <TableHead>{t.parking}</TableHead>
-                    <TableHead>{t.status}</TableHead>
-                    <TableHead className="text-right">{t.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ownerFlats.map((ownerFlat: any) => (
-                    <TableRow key={ownerFlat.id}>
-                      <TableCell className="font-medium">{ownerFlat.flats?.building_name || '-'}</TableCell>
-                      <TableCell>{ownerFlat.flats?.flat_number}</TableCell>
-                      <TableCell>{ownerFlat.flats?.floor}</TableCell>
-                      <TableCell>{ownerFlat.flats?.size?.toLocaleString()} {t.sqft}</TableCell>
-                      <TableCell>{ownerFlat.flats?.parking_spot || '-'}</TableCell>
-                      <TableCell>{getStatusBadge(ownerFlat.flats?.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{t.addExisting}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <Label>{t.selectFlat}</Label>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {availableFlats.map((flat) => (
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setEditingFlat(ownerFlat.flats);
-                              setShowEditDialog(true);
-                            }}
+                            key={flat.id}
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => handleAddExistingFlat(flat.id)}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Building2 className="h-4 w-4 mr-2" />
+                            {flat.flat_number} - Floor {flat.floor} ({flat.size} {t.sqft})
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteFlat(ownerFlat)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        ))}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Properties Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{t.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <p className="text-center py-8 text-muted-foreground">Loading...</p>
+                ) : ownerFlats.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground">{t.noProperties}</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t.buildingName}</TableHead>
+                          <TableHead>{t.flatNumber}</TableHead>
+                          <TableHead>{t.floor}</TableHead>
+                          <TableHead>{t.size}</TableHead>
+                          <TableHead>{t.parking}</TableHead>
+                          <TableHead>{t.status}</TableHead>
+                          <TableHead className="text-right">{t.actions}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ownerFlats.map((ownerFlat: any) => (
+                          <TableRow key={ownerFlat.id}>
+                            <TableCell className="font-medium">{ownerFlat.flats?.building_name || '-'}</TableCell>
+                            <TableCell>{ownerFlat.flats?.flat_number}</TableCell>
+                            <TableCell>{ownerFlat.flats?.floor}</TableCell>
+                            <TableCell>{ownerFlat.flats?.size?.toLocaleString()} {t.sqft}</TableCell>
+                            <TableCell>{ownerFlat.flats?.parking_spot || '-'}</TableCell>
+                            <TableCell>{getStatusBadge(ownerFlat.flats?.status)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setEditingFlat(ownerFlat.flats);
+                                    setShowEditDialog(true);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setDeleteFlat(ownerFlat)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <PropertyAnalytics flats={ownerFlatsData} />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
