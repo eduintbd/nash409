@@ -36,8 +36,40 @@ export const useCreateOwner = () => {
     mutationFn: async (owner: Omit<Owner, 'id' | 'created_at' | 'updated_at'> & { 
       flat_ids?: string[]; 
       flat_occupancy?: Record<string, 'owner-occupied' | 'for-rent'>;
+      new_property?: {
+        flat_number: string;
+        floor: number;
+        building_name: string;
+      } | null;
     }) => {
-      const { flat_ids, flat_occupancy, ...ownerData } = owner;
+      const { flat_ids, flat_occupancy, new_property, ...ownerData } = owner;
+      
+      let finalFlatIds = flat_ids || [];
+      let finalFlatOccupancy = flat_occupancy || {};
+      
+      // If new property, create the flat first
+      if (new_property) {
+        const occupancy = flat_occupancy?.['new'] || 'owner-occupied';
+        const status = occupancy === 'owner-occupied' ? 'owner-occupied' : 'vacant';
+        
+        const { data: newFlat, error: flatError } = await supabase
+          .from('flats')
+          .insert({
+            flat_number: new_property.flat_number,
+            floor: new_property.floor,
+            building_name: new_property.building_name,
+            size: 1200,
+            status: status as 'owner-occupied' | 'tenant' | 'vacant',
+          })
+          .select()
+          .single();
+        
+        if (flatError) throw flatError;
+        
+        finalFlatIds = [newFlat.id];
+        finalFlatOccupancy = { [newFlat.id]: occupancy };
+        ownerData.flat_id = newFlat.id;
+      }
       
       const { data, error } = await supabase
         .from('owners')
@@ -47,8 +79,8 @@ export const useCreateOwner = () => {
       if (error) throw error;
       
       // Create owner_flats entries for multiple flats
-      if (flat_ids && flat_ids.length > 0) {
-        const ownerFlatsData = flat_ids.map(flatId => ({
+      if (finalFlatIds.length > 0) {
+        const ownerFlatsData = finalFlatIds.map(flatId => ({
           owner_id: data.id,
           flat_id: flatId,
         }));
@@ -58,14 +90,16 @@ export const useCreateOwner = () => {
           .insert(ownerFlatsData);
         if (ownerFlatsError) throw ownerFlatsError;
         
-        // Update flat status based on occupancy selection
-        for (const flatId of flat_ids) {
-          const occupancy = flat_occupancy?.[flatId] || 'owner-occupied';
-          const status = occupancy === 'owner-occupied' ? 'owner-occupied' : 'vacant';
-          await supabase
-            .from('flats')
-            .update({ status })
-            .eq('id', flatId);
+        // Update flat status based on occupancy selection (for existing flats)
+        if (!new_property) {
+          for (const flatId of finalFlatIds) {
+            const occupancy = finalFlatOccupancy[flatId] || 'owner-occupied';
+            const status = occupancy === 'owner-occupied' ? 'owner-occupied' : 'vacant';
+            await supabase
+              .from('flats')
+              .update({ status })
+              .eq('id', flatId);
+          }
         }
       }
       
