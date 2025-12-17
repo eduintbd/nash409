@@ -43,7 +43,7 @@ import { formatBDT } from '@/lib/currency';
 import FlatForm from '@/components/forms/FlatForm';
 import { PropertyAnalytics } from '@/components/dashboard/PropertyAnalytics';
 import { OwnerForm } from '@/components/forms/OwnerForm';
-
+import { PropertyForm } from '@/components/forms/PropertyForm';
 const Flats = () => {
   const { t, language } = useLanguage();
   const { isAdmin } = useAuth();
@@ -65,6 +65,7 @@ const Flats = () => {
   const [editFlat, setEditFlat] = useState<Flat | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Flat | null>(null);
   const [showOwnerForm, setShowOwnerForm] = useState(false);
+  const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [editOwnerData, setEditOwnerData] = useState<any>(null);
   const [editOwnerFlatIds, setEditOwnerFlatIds] = useState<string[]>([]);
 
@@ -319,9 +320,9 @@ const Flats = () => {
                     <Plus className="h-4 w-4 mr-2" />
                     {language === 'bn' ? 'নতুন মালিক' : 'Add New Owner'}
                   </Button>
-                  <Button onClick={() => { setEditOwnerData(null); setEditOwnerFlatIds([]); setShowOwnerForm(true); }}>
+                  <Button onClick={() => setShowPropertyForm(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    {language === 'bn' ? 'নতুন প্রপার্টি' : 'New Property'}
+                    {language === 'bn' ? 'নতুন প্রপার্টি' : 'Add Property'}
                   </Button>
                 </div>
               </div>
@@ -643,6 +644,12 @@ const Flats = () => {
         }}
         editData={editOwnerData}
         existingFlatIds={editOwnerFlatIds}
+      />
+
+      {/* Property Form for adding new properties */}
+      <PropertyForm
+        open={showPropertyForm}
+        onOpenChange={setShowPropertyForm}
       />
 
       {/* Delete Confirmation */}
