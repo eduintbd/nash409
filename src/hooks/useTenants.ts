@@ -19,6 +19,7 @@ export interface Tenant {
   agreement_token: string | null;
   agreement_agreed_at: string | null;
   invitation_sent_at: string | null;
+  tenant_number: number;
   created_at: string;
   updated_at: string;
 }
@@ -37,7 +38,7 @@ export const useTenants = () => {
   });
 };
 
-export type CreateTenantInput = Omit<Tenant, 'id' | 'created_at' | 'updated_at' | 'agreement_status' | 'agreement_token' | 'agreement_agreed_at' | 'invitation_sent_at'>;
+export type CreateTenantInput = Omit<Tenant, 'id' | 'created_at' | 'updated_at' | 'agreement_status' | 'agreement_token' | 'agreement_agreed_at' | 'invitation_sent_at' | 'tenant_number'>;
 
 export const useCreateTenant = () => {
   const queryClient = useQueryClient();

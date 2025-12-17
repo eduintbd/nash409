@@ -11,6 +11,7 @@ export interface Owner {
   nid: string | null;
   emergency_contact: string | null;
   ownership_start: string;
+  owner_number: number;
   created_at: string;
   updated_at: string;
 }
@@ -33,7 +34,7 @@ export const useCreateOwner = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (owner: Omit<Owner, 'id' | 'created_at' | 'updated_at'> & { 
+    mutationFn: async (owner: Omit<Owner, 'id' | 'created_at' | 'updated_at' | 'owner_number'> & { 
       flat_ids?: string[]; 
       flat_occupancy?: Record<string, 'owner-occupied' | 'for-rent'>;
       new_property?: {

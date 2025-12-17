@@ -349,8 +349,13 @@ const Flats = () => {
                             <User className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="font-semibold">{group.owner?.name || 'Unknown Owner'}</p>
-                            <div className="flex items-center gap-4 text-sm font-normal text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="bg-primary/5 text-primary font-mono">
+                                O{group.owner?.owner_number || '?'}
+                              </Badge>
+                              <p className="font-semibold">{group.owner?.name || 'Unknown Owner'}</p>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm font-normal text-muted-foreground mt-1">
                               {group.owner?.phone && (
                                 <span className="flex items-center gap-1">
                                   <Phone className="h-3 w-3" /> {group.owner.phone}
