@@ -66,7 +66,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
   const [numberOfFlats, setNumberOfFlats] = useState('1');
   const [fromFlatNumber, setFromFlatNumber] = useState('');
   const [toFlatNumber, setToFlatNumber] = useState('');
-  const [startFloor, setStartFloor] = useState('2');
+  const [startFloor, setStartFloor] = useState('1');
 
   // Track occupancy type for each selected flat
   const [flatOccupancy, setFlatOccupancy] = useState<Record<string, OccupancyType>>({});
@@ -135,7 +135,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
       setNumberOfFlats('1');
       setFromFlatNumber('');
       setToFlatNumber('');
-      setStartFloor('2');
+      setStartFloor('1');
     }
   }, [editData, existingFlatIds, open, flats]);
 
@@ -225,7 +225,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
       setNumberOfFlats('1');
       setFromFlatNumber('');
       setToFlatNumber('');
-      setStartFloor('2');
+      setStartFloor('1');
     }
   };
 
@@ -342,21 +342,33 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="fromFlatNumber">{t.fromFlatNumber} *</Label>
-                  <Input
-                    id="fromFlatNumber"
-                    value={fromFlatNumber}
-                    onChange={(e) => setFromFlatNumber(e.target.value)}
-                    placeholder={language === 'bn' ? 'যেমন: 2A' : 'e.g., 2A'}
-                  />
+                  <Select value={fromFlatNumber} onValueChange={setFromFlatNumber}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={language === 'bn' ? 'নির্বাচন করুন' : 'Select'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map(num => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="toFlatNumber">{t.toFlatNumber}</Label>
-                  <Input
-                    id="toFlatNumber"
-                    value={toFlatNumber}
-                    onChange={(e) => setToFlatNumber(e.target.value)}
-                    placeholder={language === 'bn' ? 'যেমন: 6D' : 'e.g., 6D'}
-                  />
+                  <Select value={toFlatNumber} onValueChange={setToFlatNumber}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={language === 'bn' ? 'নির্বাচন করুন' : 'Select'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map(num => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div>
@@ -366,7 +378,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(floor => (
+                    {[1, 2, 3, 4, 5].map(floor => (
                       <SelectItem key={floor} value={floor.toString()}>
                         {floor}
                       </SelectItem>
