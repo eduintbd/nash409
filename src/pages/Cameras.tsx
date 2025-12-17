@@ -39,6 +39,25 @@ const Cameras = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [newCamera, setNewCamera] = useState({ name: '', location: '', camera_id: '' });
+  const [rtspUrlByCameraId, setRtspUrlByCameraId] = useState<Record<string, string>>({});
+
+  const getDefaultRtspUrl = (ip: string) => `rtsp://${ip}:554/live/ch00_0`;
+
+  const getRtspUrl = (camera: any) => {
+    if (!camera?.camera_id) return '';
+    return rtspUrlByCameraId[camera.id] ?? getDefaultRtspUrl(camera.camera_id);
+  };
+
+  const setRtspUrlForCamera = (cameraId: string, value: string) => {
+    setRtspUrlByCameraId((prev) => ({ ...prev, [cameraId]: value }));
+  };
+
+  const getRtspCandidates = (ip: string) => [
+    { key: '554_ch00_0', label: '554 ch00_0', url: `rtsp://${ip}:554/live/ch00_0` },
+    { key: '554_ch00_1', label: '554 ch00_1', url: `rtsp://${ip}:554/live/ch00_1` },
+    { key: '8554_ch00_0', label: '8554 ch00_0', url: `rtsp://${ip}:8554/live/ch00_0` },
+    { key: 'h264_main', label: 'h264 main', url: `rtsp://${ip}:554/h264Preview_01_main` },
+  ];
 
   const onlineCount = cameras?.filter(c => c.status === 'online').length || 0;
 
@@ -79,8 +98,8 @@ const Cameras = () => {
     window.open(`http://${ip}`, '_blank');
   };
 
-  const openInVLC = (ip: string, name: string) => {
-    const rtspUrl = `rtsp://${ip}:554/live/ch00_0`;
+  const openInVLC = (rtspUrl: string, name: string) => {
+    if (!rtspUrl) return;
     // Create a .m3u playlist file that VLC will open
     const playlistContent = `#EXTM3U\n#EXTINF:-1,${name}\n${rtspUrl}`;
     const blob = new Blob([playlistContent], { type: 'audio/x-mpegurl' });
@@ -94,9 +113,10 @@ const Cameras = () => {
     URL.revokeObjectURL(url);
     toast({
       title: language === 'bn' ? 'ফাইল ডাউনলোড হয়েছে' : 'File Downloaded',
-      description: language === 'bn' 
-        ? 'ডাউনলোড করা .m3u ফাইলটি খুলুন - VLC স্বয়ংক্রিয়ভাবে শুরু হবে' 
-        : 'Open the downloaded .m3u file - VLC will start automatically',
+      description:
+        language === 'bn'
+          ? 'ডাউনলোড করা .m3u ফাইলটি খুলুন - VLC স্বয়ংক্রিয়ভাবে শুরু হবে'
+          : 'Open the downloaded .m3u file - VLC will start automatically',
     });
   };
 
@@ -233,28 +253,57 @@ const Cameras = () => {
                 
                 <CardContent className="space-y-3">
                   {camera.camera_id && (
-                    <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                    <div className="p-3 rounded-lg bg-muted/50 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">IP: {camera.camera_id}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7"
                           onClick={() => copyToClipboard(camera.camera_id!)}
                         >
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">RTSP: rtsp://{camera.camera_id}:554/live/ch00_0</span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7"
-                          onClick={() => copyToClipboard(`rtsp://${camera.camera_id}:554/live/ch00_0`)}
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            {language === 'bn' ? 'RTSP লিংক' : 'RTSP URL'}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => copyToClipboard(getRtspUrl(camera))}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <Input
+                          value={getRtspUrl(camera)}
+                          onChange={(e) => setRtspUrlForCamera(camera.id, e.target.value)}
+                          className="h-9 text-xs"
+                          placeholder="rtsp://192.168.0.102:554/live/ch00_0"
+                        />
+                        <div className="flex flex-wrap gap-1">
+                          {getRtspCandidates(camera.camera_id).map((opt) => (
+                            <Button
+                              key={opt.key}
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setRtspUrlForCamera(camera.id, opt.url)}
+                            >
+                              {opt.label}
+                            </Button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {language === 'bn'
+                            ? 'VLC তে না চললে অন্য স্ট্রিম অপশন চেষ্টা করুন।'
+                            : 'If VLC is blank, try another stream option.'}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -275,7 +324,7 @@ const Cameras = () => {
                       size="sm" 
                       className="w-full text-xs md:text-sm px-2 md:px-3"
                       disabled={!camera.camera_id || camera.status === 'offline'}
-                      onClick={() => camera.camera_id && openInVLC(camera.camera_id, camera.name)}
+                      onClick={() => openInVLC(getRtspUrl(camera), camera.name)}
                     >
                       <Play className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
                       <span className="hidden md:inline">VLC</span>
