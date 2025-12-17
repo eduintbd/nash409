@@ -152,6 +152,7 @@ export type Database = {
         Row: {
           building_name: string | null
           created_at: string
+          display_order: number | null
           flat_number: string
           floor: number
           id: string
@@ -163,6 +164,7 @@ export type Database = {
         Insert: {
           building_name?: string | null
           created_at?: string
+          display_order?: number | null
           flat_number: string
           floor: number
           id?: string
@@ -174,6 +176,7 @@ export type Database = {
         Update: {
           building_name?: string | null
           created_at?: string
+          display_order?: number | null
           flat_number?: string
           floor?: number
           id?: string

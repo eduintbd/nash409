@@ -10,6 +10,7 @@ export interface Flat {
   size: number;
   status: 'owner-occupied' | 'tenant' | 'vacant';
   parking_spot: string | null;
+  display_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +22,8 @@ export const useFlats = () => {
       const { data, error } = await supabase
         .from('flats')
         .select('*')
+        .order('display_order')
+        .order('building_name')
         .order('flat_number');
       if (error) throw error;
       return data as Flat[];
@@ -32,7 +35,7 @@ export const useCreateFlat = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (flat: Omit<Flat, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (flat: Omit<Flat, 'id' | 'created_at' | 'updated_at' | 'display_order'>) => {
       const { data, error } = await supabase
         .from('flats')
         .insert(flat)
@@ -89,6 +92,33 @@ export const useDeleteFlat = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flats'] });
       toast({ title: 'Flat deleted / ফ্ল্যাট মুছে ফেলা হয়েছে' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useReorderFlats = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (orderedFlats: { id: string; display_order: number }[]) => {
+      // Update each flat's display_order
+      const updates = orderedFlats.map(({ id, display_order }) =>
+        supabase
+          .from('flats')
+          .update({ display_order })
+          .eq('id', id)
+      );
+      
+      const results = await Promise.all(updates);
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) throw errors[0].error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['flats'] });
+      toast({ title: 'Order saved / ক্রম সংরক্ষিত হয়েছে' });
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
