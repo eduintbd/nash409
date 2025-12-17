@@ -26,7 +26,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Building2, Home, Users, TrendingUp, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, Home, Users, TrendingUp, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,9 +64,11 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
   const queryClient = useQueryClient();
   
   const [editProperty, setEditProperty] = useState<BuildingStats | null>(null);
+  const [deleteProperty, setDeleteProperty] = useState<BuildingStats | null>(null);
   const [newPropertyName, setNewPropertyName] = useState('');
   const [newTotalUnits, setNewTotalUnits] = useState<number>(0);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
 
   const t = {
@@ -93,6 +96,12 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
     updateError: language === 'bn' ? 'আপডেট করতে সমস্যা হয়েছে' : 'Failed to update',
     flatNumbers: language === 'bn' ? 'ফ্ল্যাট নম্বর' : 'Flat Numbers',
     clickToExpand: language === 'bn' ? 'বিস্তারিত দেখতে ক্লিক করুন' : 'Click to expand',
+    deleteProperty: language === 'bn' ? 'প্রপার্টি মুছুন' : 'Delete Property',
+    deletePropertyDesc: language === 'bn' ? 'আপনি কি নিশ্চিত? এটি সমস্ত সংশ্লিষ্ট ফ্ল্যাট মুছে ফেলবে।' : 'Are you sure? This will delete all associated flats.',
+    deleteSuccess: language === 'bn' ? 'প্রপার্টি মুছে ফেলা হয়েছে' : 'Property deleted',
+    deleteError: language === 'bn' ? 'মুছে ফেলতে সমস্যা হয়েছে' : 'Failed to delete',
+    cannotDeleteOccupied: language === 'bn' ? 'দখলকৃত ফ্ল্যাট মুছে ফেলা যাবে না' : 'Cannot delete occupied flats',
+    delete: language === 'bn' ? 'মুছুন' : 'Delete',
   };
 
   const analytics = useMemo(() => {
@@ -227,6 +236,36 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
     setExpandedProperty(expandedProperty === propertyName ? null : propertyName);
   };
 
+  const handleDeleteProperty = async () => {
+    if (!deleteProperty) return;
+    
+    // Check if there are occupied flats
+    const occupiedCount = deleteProperty.ownerOccupied + deleteProperty.tenantOccupied;
+    if (occupiedCount > 0) {
+      toast({ title: t.cannotDeleteOccupied, variant: 'destructive' });
+      setDeleteProperty(null);
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('flats')
+        .delete()
+        .in('id', deleteProperty.flatIds);
+
+      if (error) throw error;
+
+      toast({ title: t.deleteSuccess });
+      queryClient.invalidateQueries({ queryKey: ['flats'] });
+      setDeleteProperty(null);
+    } catch (error: any) {
+      toast({ title: t.deleteError, description: error.message, variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -346,13 +385,23 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
                     </TableCell>
                     {isAdmin && (
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditProperty(building)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditProperty(building)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteProperty(building)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -489,6 +538,33 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Property Confirmation */}
+      <AlertDialog open={!!deleteProperty} onOpenChange={() => setDeleteProperty(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.deleteProperty}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.deletePropertyDesc}
+              {deleteProperty && (deleteProperty.ownerOccupied + deleteProperty.tenantOccupied) > 0 && (
+                <span className="block mt-2 text-destructive font-medium">
+                  {t.cannotDeleteOccupied}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProperty}
+              disabled={isDeleting || (deleteProperty ? (deleteProperty.ownerOccupied + deleteProperty.tenantOccupied) > 0 : false)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
