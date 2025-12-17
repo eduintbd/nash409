@@ -161,33 +161,36 @@ const Cameras = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {cameras?.map((camera) => (
               <Card key={camera.id} className="stat-card border-0 overflow-hidden">
-                {/* Camera Preview - Try iframe embed */}
-                <div className="aspect-video bg-muted/30 relative">
+                {/* Camera Preview */}
+                <div className="aspect-video bg-muted/30 relative flex items-center justify-center">
                   {camera.status === 'online' && camera.camera_id ? (
-                    <iframe
-                      src={`http://${camera.camera_id}`}
-                      className="w-full h-full border-0"
-                      title={camera.name}
-                      sandbox="allow-same-origin allow-scripts"
-                      onError={(e) => {
-                        console.log('Iframe load error:', e);
-                      }}
-                    />
+                    <div className="text-center p-4">
+                      <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-3">
+                        <Wifi className="h-8 w-8 text-success" />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">
+                        {language === 'bn' ? 'ক্যামেরা সংযুক্ত' : 'Camera Connected'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        IP: {camera.camera_id}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {language === 'bn' 
+                          ? 'VLC বা V380 Pro অ্যাপ দিয়ে দেখুন'
+                          : 'View with VLC or V380 Pro app'}
+                      </p>
+                    </div>
+                  ) : camera.status === 'online' ? (
+                    <div className="text-center p-4">
+                      <Camera className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {language === 'bn' ? 'IP ঠিকানা যুক্ত করুন' : 'Add IP address to view'}
+                      </p>
+                    </div>
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {camera.status === 'online' ? (
-                        <div className="text-center p-4">
-                          <Camera className="h-12 w-12 text-muted-foreground/50 mx-auto" />
-                          <p className="text-sm text-muted-foreground mt-2">
-                            {language === 'bn' ? 'IP ঠিকানা যুক্ত করুন' : 'Add IP address to view'}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <WifiOff className="h-12 w-12 text-destructive/50 mx-auto" />
-                          <p className="text-xs text-destructive mt-2">{t.cameras.offline}</p>
-                        </div>
-                      )}
+                    <div className="text-center">
+                      <WifiOff className="h-12 w-12 text-destructive/50 mx-auto" />
+                      <p className="text-xs text-destructive mt-2">{t.cameras.offline}</p>
                     </div>
                   )}
                   
