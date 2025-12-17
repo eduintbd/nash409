@@ -515,8 +515,8 @@ const Flats = () => {
                                 setShowOwnerForm(true);
                               }}
                             >
-                              <Pencil className="h-4 w-4 mr-1" />
-                              {language === 'bn' ? 'সম্পাদনা' : 'Edit'}
+                              <Plus className="h-4 w-4 mr-1" />
+                              {language === 'bn' ? 'নতুন সম্পত্তি যোগ করুন' : 'Add New Property'}
                             </Button>
                           </div>
                         </CardTitle>
