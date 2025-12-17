@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useFlats, useUpdateFlat, useCreateFlat, useDeleteFlat, Flat } from '@/hooks/useFlats';
@@ -314,10 +314,16 @@ const Flats = () => {
                     className="pl-9"
                   />
                 </div>
-                <Button onClick={() => { setEditOwnerData(null); setEditOwnerFlatIds([]); setShowOwnerForm(true); }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {language === 'bn' ? 'নতুন প্রপার্টি' : 'New Property'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => { setEditOwnerData(null); setEditOwnerFlatIds([]); setShowOwnerForm(true); }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {language === 'bn' ? 'নতুন মালিক' : 'Add New Owner'}
+                  </Button>
+                  <Button onClick={() => { setEditOwnerData(null); setEditOwnerFlatIds([]); setShowOwnerForm(true); }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {language === 'bn' ? 'নতুন প্রপার্টি' : 'New Property'}
+                  </Button>
+                </div>
               </div>
 
               {/* Owner Properties Cards */}
