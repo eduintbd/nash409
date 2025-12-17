@@ -323,30 +323,30 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
             {t.listedProperties}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t.propertyName}</TableHead>
-                <TableHead className="text-center">{t.totalUnits}</TableHead>
-                <TableHead className="text-center">{t.ownerOccupied}</TableHead>
-                <TableHead className="text-center">{t.tenantOccupied}</TableHead>
-                <TableHead className="text-center">{t.vacant}</TableHead>
-                <TableHead className="text-center">{t.occupancy}</TableHead>
-                {isAdmin && <TableHead className="text-right">{t.actions}</TableHead>}
+                <TableHead className="w-[180px]">{t.propertyName}</TableHead>
+                <TableHead className="w-[100px] text-center">{t.totalUnits}</TableHead>
+                <TableHead className="w-[80px] text-center">{t.ownerOccupied}</TableHead>
+                <TableHead className="w-[80px] text-center">{t.tenantOccupied}</TableHead>
+                <TableHead className="w-[80px] text-center">{t.vacant}</TableHead>
+                <TableHead className="w-[80px] text-center">{t.occupancy}</TableHead>
+                {isAdmin && <TableHead className="w-[100px] text-center">{t.actions}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {analytics.buildingStats.map((building) => (
                 <Collapsible key={building.name} open={expandedProperty === building.name}>
                   <TableRow className="group">
-                    <TableCell>
+                    <TableCell className="w-[180px]">
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{building.name}</span>
+                        <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="font-medium truncate">{building.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="w-[100px] text-center">
                       <CollapsibleTrigger asChild>
                         <Button
                           variant="ghost"
@@ -363,33 +363,34 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
                         </Button>
                       </CollapsibleTrigger>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="w-[80px] text-center">
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                         {building.ownerOccupied}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="w-[80px] text-center">
                       <Badge variant="outline" className="bg-success/10 text-success border-success/20">
                         {building.tenantOccupied}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="w-[80px] text-center">
                       <Badge variant="outline" className="bg-muted text-muted-foreground">
                         {building.vacant}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="w-[80px] text-center">
                       <Badge variant="outline" className={getOccupancyBadge(building.occupancyRate)}>
                         {building.occupancyRate.toFixed(0)}%
                       </Badge>
                     </TableCell>
                     {isAdmin && (
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <TableCell className="w-[100px] text-center">
+                        <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEditProperty(building)}
+                            title={t.editProperty}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -398,6 +399,7 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
                             size="icon"
                             onClick={() => setDeleteProperty(building)}
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title={t.deleteProperty}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
