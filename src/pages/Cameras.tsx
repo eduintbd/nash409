@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -51,10 +52,25 @@ const Cameras = () => {
     }));
   };
 
-  const buildRtspUrl = (ip: string, port: string, path: string, username?: string, password?: string) => {
-    if (username && password) {
-      return `rtsp://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${ip}:${port}${path}`;
+  const encodeRtspCredentialPart = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    try {
+      // Users sometimes paste already-encoded values (e.g. %40). Decode + re-encode to avoid double-encoding.
+      return encodeURIComponent(decodeURIComponent(trimmed));
+    } catch {
+      return encodeURIComponent(trimmed);
     }
+  };
+
+  const buildRtspUrl = (ip: string, port: string, path: string, username?: string, password?: string) => {
+    const u = username ? encodeRtspCredentialPart(username) : '';
+    const p = password ? encodeRtspCredentialPart(password) : '';
+
+    if (u && p) {
+      return `rtsp://${u}:${p}@${ip}:${port}${path}`;
+    }
+
     return `rtsp://${ip}:${port}${path}`;
   };
 
@@ -121,23 +137,27 @@ const Cameras = () => {
 
   const openInVLC = (rtspUrl: string, name: string) => {
     if (!rtspUrl) return;
-    // Create a .m3u playlist file that VLC will open
-    const playlistContent = `#EXTM3U\n#EXTINF:-1,${name}\n${rtspUrl}`;
+
+    // Create a .m3u playlist file that VLC will open (force RTSP over TCP for better reliability)
+    const safeName = name.replace(/\s+/g, '_');
+    const playlistContent = `#EXTM3U\n#EXTVLCOPT:rtsp-tcp\n#EXTVLCOPT:network-caching=1000\n#EXTINF:-1,${name}\n${rtspUrl}\n`;
+
     const blob = new Blob([playlistContent], { type: 'audio/x-mpegurl' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${name.replace(/\s+/g, '_')}.m3u`;
+    a.download = `${safeName}.m3u`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
     toast({
       title: language === 'bn' ? 'ফাইল ডাউনলোড হয়েছে' : 'File Downloaded',
       description:
         language === 'bn'
-          ? 'ডাউনলোড করা .m3u ফাইলটি খুলুন - VLC স্বয়ংক্রিয়ভাবে শুরু হবে'
-          : 'Open the downloaded .m3u file - VLC will start automatically',
+          ? 'ডাউনলোড করা .m3u ফাইলটি VLC দিয়ে খুলুন (না খুললে: Right click → Open with → VLC)'
+          : 'Open the downloaded .m3u file with VLC (if it doesn’t open: right click → Open with → VLC)',
     });
   };
 
@@ -345,8 +365,8 @@ const Cameras = () => {
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {language === 'bn'
-                            ? 'ইউজারনেম/পাসওয়ার্ড দিন, তারপর একটি স্ট্রিম বাটনে ক্লিক করুন।'
-                            : 'Enter username/password, then click a stream button.'}
+                            ? 'ইউজার/পাসওয়ার্ড সাধারণভাবে লিখুন (যেমন @ থাকলে %40 দেবেন না) তারপর একটি স্ট্রিম বাটনে ক্লিক করুন।'
+                            : 'Type username/password normally (don’t manually encode like %40), then click a stream button.'}
                         </p>
                       </div>
                     </div>
@@ -402,11 +422,14 @@ const Cameras = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t.common.add} {t.cameras.title}</DialogTitle>
+            <DialogDescription>
+              {language === 'bn' ? 'নতুন IP ক্যামেরা যোগ করুন' : 'Add a new IP camera'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>{t.common.name}</Label>
-              <Input 
+              <Input
                 value={newCamera.name} 
                 onChange={(e) => setNewCamera({ ...newCamera, name: e.target.value })}
                 placeholder="Main Gate Camera"
