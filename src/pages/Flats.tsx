@@ -42,6 +42,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
 import FlatForm from '@/components/forms/FlatForm';
 import { PropertyAnalytics } from '@/components/dashboard/PropertyAnalytics';
+import { OwnerForm } from '@/components/forms/OwnerForm';
 
 const Flats = () => {
   const { t, language } = useLanguage();
@@ -63,6 +64,9 @@ const Flats = () => {
   const [showForm, setShowForm] = useState(false);
   const [editFlat, setEditFlat] = useState<Flat | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Flat | null>(null);
+  const [showOwnerForm, setShowOwnerForm] = useState(false);
+  const [editOwnerData, setEditOwnerData] = useState<any>(null);
+  const [editOwnerFlatIds, setEditOwnerFlatIds] = useState<string[]>([]);
 
   const statusColors = {
     'owner-occupied': 'bg-primary/10 text-primary border-primary/20',
@@ -347,9 +351,23 @@ const Flats = () => {
                               )}
                             </div>
                           </div>
-                          <Badge className="ml-auto" variant="secondary">
-                            {group.flats.length} {language === 'bn' ? 'টি সম্পত্তি' : 'Properties'}
-                          </Badge>
+                          <div className="ml-auto flex items-center gap-2">
+                            <Badge variant="secondary">
+                              {group.flats.length} {language === 'bn' ? 'টি সম্পত্তি' : 'Properties'}
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditOwnerData(group.owner);
+                                setEditOwnerFlatIds(group.flats.map((f: any) => f?.id).filter(Boolean));
+                                setShowOwnerForm(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" />
+                              {language === 'bn' ? 'সম্পাদনা' : 'Edit'}
+                            </Button>
+                          </div>
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -594,6 +612,20 @@ const Flats = () => {
         ownerData={editOwner || null}
         tenantData={editTenant || null}
         isLoading={createFlat.isPending || updateFlat.isPending || updateOwner.isPending || updateTenant.isPending}
+      />
+
+      {/* Owner Form for editing/adding properties */}
+      <OwnerForm
+        open={showOwnerForm}
+        onOpenChange={(open) => {
+          setShowOwnerForm(open);
+          if (!open) {
+            setEditOwnerData(null);
+            setEditOwnerFlatIds([]);
+          }
+        }}
+        editData={editOwnerData}
+        existingFlatIds={editOwnerFlatIds}
       />
 
       {/* Delete Confirmation */}
