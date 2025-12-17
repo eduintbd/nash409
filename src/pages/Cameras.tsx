@@ -40,23 +40,44 @@ const Cameras = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [newCamera, setNewCamera] = useState({ name: '', location: '', camera_id: '' });
   const [rtspUrlByCameraId, setRtspUrlByCameraId] = useState<Record<string, string>>({});
+  const [rtspCredentials, setRtspCredentials] = useState<Record<string, { username: string; password: string }>>({});
 
-  const getDefaultRtspUrl = (ip: string) => `rtsp://${ip}:554/live/ch00_0`;
+  const getCredentials = (cameraId: string) => rtspCredentials[cameraId] || { username: '', password: '' };
+
+  const setCredentialsForCamera = (cameraId: string, field: 'username' | 'password', value: string) => {
+    setRtspCredentials((prev) => ({
+      ...prev,
+      [cameraId]: { ...getCredentials(cameraId), [field]: value },
+    }));
+  };
+
+  const buildRtspUrl = (ip: string, port: string, path: string, username?: string, password?: string) => {
+    if (username && password) {
+      return `rtsp://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${ip}:${port}${path}`;
+    }
+    return `rtsp://${ip}:${port}${path}`;
+  };
+
+  const getDefaultRtspUrl = (ip: string, username?: string, password?: string) => 
+    buildRtspUrl(ip, '554', '/live/ch00_0', username, password);
 
   const getRtspUrl = (camera: any) => {
     if (!camera?.camera_id) return '';
-    return rtspUrlByCameraId[camera.id] ?? getDefaultRtspUrl(camera.camera_id);
+    const creds = getCredentials(camera.id);
+    const customUrl = rtspUrlByCameraId[camera.id];
+    if (customUrl) return customUrl;
+    return getDefaultRtspUrl(camera.camera_id, creds.username, creds.password);
   };
 
   const setRtspUrlForCamera = (cameraId: string, value: string) => {
     setRtspUrlByCameraId((prev) => ({ ...prev, [cameraId]: value }));
   };
 
-  const getRtspCandidates = (ip: string) => [
-    { key: '554_ch00_0', label: '554 ch00_0', url: `rtsp://${ip}:554/live/ch00_0` },
-    { key: '554_ch00_1', label: '554 ch00_1', url: `rtsp://${ip}:554/live/ch00_1` },
-    { key: '8554_ch00_0', label: '8554 ch00_0', url: `rtsp://${ip}:8554/live/ch00_0` },
-    { key: 'h264_main', label: 'h264 main', url: `rtsp://${ip}:554/h264Preview_01_main` },
+  const getRtspCandidates = (ip: string, username?: string, password?: string) => [
+    { key: '554_ch00_0', label: '554 ch00_0', url: buildRtspUrl(ip, '554', '/live/ch00_0', username, password) },
+    { key: '554_ch00_1', label: '554 ch00_1', url: buildRtspUrl(ip, '554', '/live/ch00_1', username, password) },
+    { key: '8554_ch00_0', label: '8554 ch00_0', url: buildRtspUrl(ip, '8554', '/live/ch00_0', username, password) },
+    { key: 'h264_main', label: 'h264 main', url: buildRtspUrl(ip, '554', '/h264Preview_01_main', username, password) },
   ];
 
   const onlineCount = cameras?.filter(c => c.status === 'online').length || 0;
@@ -266,6 +287,29 @@ const Cameras = () => {
                         </Button>
                       </div>
 
+                      {/* RTSP Credentials */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs">{language === 'bn' ? 'ইউজারনেম' : 'Username'}</Label>
+                          <Input
+                            value={getCredentials(camera.id).username}
+                            onChange={(e) => setCredentialsForCamera(camera.id, 'username', e.target.value)}
+                            className="h-8 text-xs"
+                            placeholder="admin"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">{language === 'bn' ? 'পাসওয়ার্ড' : 'Password'}</Label>
+                          <Input
+                            type="password"
+                            value={getCredentials(camera.id).password}
+                            onChange={(e) => setCredentialsForCamera(camera.id, 'password', e.target.value)}
+                            className="h-8 text-xs"
+                            placeholder="••••••••"
+                          />
+                        </div>
+                      </div>
+
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">
@@ -284,10 +328,10 @@ const Cameras = () => {
                           value={getRtspUrl(camera)}
                           onChange={(e) => setRtspUrlForCamera(camera.id, e.target.value)}
                           className="h-9 text-xs"
-                          placeholder="rtsp://192.168.0.102:554/live/ch00_0"
+                          placeholder="rtsp://user:pass@192.168.0.102:554/live/ch00_0"
                         />
                         <div className="flex flex-wrap gap-1">
-                          {getRtspCandidates(camera.camera_id).map((opt) => (
+                          {getRtspCandidates(camera.camera_id, getCredentials(camera.id).username, getCredentials(camera.id).password).map((opt) => (
                             <Button
                               key={opt.key}
                               variant="outline"
@@ -301,8 +345,8 @@ const Cameras = () => {
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {language === 'bn'
-                            ? 'VLC তে না চললে অন্য স্ট্রিম অপশন চেষ্টা করুন।'
-                            : 'If VLC is blank, try another stream option.'}
+                            ? 'ইউজারনেম/পাসওয়ার্ড দিন, তারপর একটি স্ট্রিম বাটনে ক্লিক করুন।'
+                            : 'Enter username/password, then click a stream button.'}
                         </p>
                       </div>
                     </div>
