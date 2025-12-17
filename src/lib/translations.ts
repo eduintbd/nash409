@@ -3,7 +3,7 @@ export const translations = {
     // Navigation
     nav: {
       dashboard: 'Dashboard',
-      flats: 'Flats',
+      flats: 'Property Management',
       residents: 'Owners & Tenants',
       employees: 'Employees',
       invoices: 'Invoices',
@@ -63,8 +63,8 @@ export const translations = {
     },
     // Flats
     flats: {
-      title: 'Flats Management',
-      subtitle: 'Manage all flats in your building',
+      title: 'Property Management',
+      subtitle: 'Manage all properties in your building',
       searchPlaceholder: 'Search flats...',
       flatNo: 'Flat No.',
       floor: 'Floor',
@@ -216,7 +216,7 @@ export const translations = {
     // Navigation
     nav: {
       dashboard: 'ড্যাশবোর্ড',
-      flats: 'ফ্ল্যাট',
+      flats: 'সম্পত্তি ব্যবস্থাপনা',
       residents: 'মালিক ও ভাড়াটিয়া',
       employees: 'কর্মচারী',
       invoices: 'বিল',
@@ -276,8 +276,8 @@ export const translations = {
     },
     // Flats
     flats: {
-      title: 'ফ্ল্যাট ব্যবস্থাপনা',
-      subtitle: 'আপনার বিল্ডিংয়ের সকল ফ্ল্যাট',
+      title: 'সম্পত্তি ব্যবস্থাপনা',
+      subtitle: 'আপনার বিল্ডিংয়ের সকল সম্পত্তি',
       searchPlaceholder: 'ফ্ল্যাট খুঁজুন...',
       flatNo: 'ফ্ল্যাট নং',
       floor: 'ফ্লোর',
