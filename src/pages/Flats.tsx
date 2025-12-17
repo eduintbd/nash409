@@ -303,15 +303,21 @@ const Flats = () => {
             </TabsContent>
 
             <TabsContent value="owner-properties" className="space-y-4">
-              {/* Search */}
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={language === 'bn' ? 'মালিক বা সম্পত্তি খুঁজুন...' : 'Search owner or property...'}
-                  value={ownerSearch}
-                  onChange={(e) => setOwnerSearch(e.target.value)}
-                  className="pl-9"
-                />
+              {/* Search and Add New Property */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={language === 'bn' ? 'মালিক বা সম্পত্তি খুঁজুন...' : 'Search owner or property...'}
+                    value={ownerSearch}
+                    onChange={(e) => setOwnerSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Button onClick={() => { setEditOwnerData(null); setEditOwnerFlatIds([]); setShowOwnerForm(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {language === 'bn' ? 'নতুন প্রপার্টি' : 'New Property'}
+                </Button>
               </div>
 
               {/* Owner Properties Cards */}

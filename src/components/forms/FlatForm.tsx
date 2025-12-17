@@ -6,10 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flat } from '@/hooks/useFlats';
+import { Flat, useFlats } from '@/hooks/useFlats';
 import { Owner } from '@/hooks/useOwners';
 import { Tenant } from '@/hooks/useTenants';
-import { Building2, User, Users } from 'lucide-react';
+import { Building2, User, Users, Plus } from 'lucide-react';
 
 interface FlatFormProps {
   isOpen: boolean;
@@ -27,6 +27,14 @@ interface FlatFormProps {
 
 const FlatForm = ({ isOpen, onClose, onSubmit, editData, ownerData, tenantData, isLoading }: FlatFormProps) => {
   const { language } = useLanguage();
+  const { data: allFlats } = useFlats();
+  
+  // Get unique building names from existing flats
+  const existingBuildings = [...new Set(allFlats?.map(f => f.building_name).filter(Boolean) || [])];
+  
+  const [selectedBuilding, setSelectedBuilding] = useState<string>('');
+  const [isNewBuilding, setIsNewBuilding] = useState(false);
+  const [newBuildingName, setNewBuildingName] = useState('');
   
   const [flatData, setFlatData] = useState({
     flat_number: '',
@@ -61,6 +69,11 @@ const FlatForm = ({ isOpen, onClose, onSubmit, editData, ownerData, tenantData, 
         status: editData.status,
         parking_spot: editData.parking_spot || '',
       });
+      // Set building name for edit
+      if (editData.building_name) {
+        setSelectedBuilding(editData.building_name);
+        setIsNewBuilding(false);
+      }
     } else {
       setFlatData({
         flat_number: '',
@@ -69,6 +82,9 @@ const FlatForm = ({ isOpen, onClose, onSubmit, editData, ownerData, tenantData, 
         status: 'vacant',
         parking_spot: '',
       });
+      setSelectedBuilding('');
+      setIsNewBuilding(false);
+      setNewBuildingName('');
     }
 
     if (ownerData) {
@@ -99,8 +115,11 @@ const FlatForm = ({ isOpen, onClose, onSubmit, editData, ownerData, tenantData, 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const buildingName = isNewBuilding ? newBuildingName : selectedBuilding;
+    
     const flatPayload: Partial<Flat> = {
       flat_number: flatData.flat_number,
+      building_name: buildingName || null,
       floor: parseInt(flatData.floor),
       size: parseInt(flatData.size),
       status: flatData.status,
@@ -165,6 +184,54 @@ const FlatForm = ({ isOpen, onClose, onSubmit, editData, ownerData, tenantData, 
 
             {/* Flat Details Tab */}
             <TabsContent value="flat" className="space-y-4">
+              {/* Property Name Selection */}
+              <div>
+                <Label>{language === 'bn' ? 'প্রপার্টি/বিল্ডিং' : 'Property/Building'} *</Label>
+                {!isNewBuilding ? (
+                  <div className="flex gap-2">
+                    <Select value={selectedBuilding} onValueChange={setSelectedBuilding}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder={language === 'bn' ? 'বিল্ডিং নির্বাচন করুন' : 'Select building'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {existingBuildings.map((building) => (
+                          <SelectItem key={building} value={building!}>
+                            {building}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsNewBuilding(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      {language === 'bn' ? 'নতুন' : 'New'}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newBuildingName}
+                      onChange={(e) => setNewBuildingName(e.target.value)}
+                      placeholder={language === 'bn' ? 'নতুন প্রপার্টির নাম' : 'New property name'}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsNewBuilding(false);
+                        setNewBuildingName('');
+                      }}
+                    >
+                      {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="flat_number">{language === 'bn' ? 'ফ্ল্যাট নম্বর' : 'Flat No.'} *</Label>
