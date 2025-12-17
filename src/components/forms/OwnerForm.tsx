@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,11 +18,13 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useCreateOwner, useUpdateOwner } from '@/hooks/useOwners';
+import { useCreateOwner, useUpdateOwner, useOwners } from '@/hooks/useOwners';
+import { useAllOwnerFlats } from '@/hooks/useOwnerFlats';
 import { useFlats } from '@/hooks/useFlats';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus } from 'lucide-react';
+import { Plus, UserCheck } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface OwnerFormProps {
   open: boolean;
@@ -45,6 +47,8 @@ type OccupancyType = 'owner-occupied' | 'for-rent';
 export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }: OwnerFormProps) => {
   const { language } = useLanguage();
   const { data: flats } = useFlats();
+  const { data: owners } = useOwners();
+  const { data: allOwnerFlats } = useAllOwnerFlats();
   const createOwner = useCreateOwner();
   const updateOwner = useUpdateOwner();
   
@@ -57,6 +61,9 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
     flat_ids: [] as string[],
     ownership_start: new Date().toISOString().split('T')[0],
   });
+
+  // State for linking to existing owner by ID
+  const [linkedOwner, setLinkedOwner] = useState<any>(null);
 
   // Property/Building selection state
   const [selectedBuilding, setSelectedBuilding] = useState<string>('');
@@ -91,6 +98,62 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
     ) || [];
   }, [flats, selectedBuilding, existingFlatIds, isNewProperty]);
 
+  // Get existing flat IDs for a linked owner
+  const linkedOwnerFlatIds = useMemo(() => {
+    if (!linkedOwner || !allOwnerFlats) return [];
+    return allOwnerFlats
+      .filter(of => of.owner_id === linkedOwner.id)
+      .map(of => of.flat_id);
+  }, [linkedOwner, allOwnerFlats]);
+
+  // Handle name input change and detect Owner ID pattern
+  const handleNameChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, name: value }));
+    
+    // Check if input matches Owner ID pattern (O1, O2, o1, o2, etc.)
+    const ownerIdMatch = value.trim().match(/^[Oo](\d+)$/);
+    if (ownerIdMatch && owners) {
+      const ownerNumber = parseInt(ownerIdMatch[1]);
+      const matchedOwner = owners.find(o => o.owner_number === ownerNumber);
+      
+      if (matchedOwner) {
+        setLinkedOwner(matchedOwner);
+        // Pre-fill form with owner data
+        setFormData({
+          name: matchedOwner.name,
+          email: matchedOwner.email || '',
+          phone: matchedOwner.phone || '',
+          nid: matchedOwner.nid || '',
+          emergency_contact: matchedOwner.emergency_contact || '',
+          flat_ids: [],
+          ownership_start: matchedOwner.ownership_start || new Date().toISOString().split('T')[0],
+        });
+        toast({
+          title: language === 'bn' ? `মালিক পাওয়া গেছে: ${matchedOwner.name}` : `Owner found: ${matchedOwner.name}`,
+          description: language === 'bn' ? 'এই মালিকের জন্য প্রপার্টি যুক্ত করুন' : 'Add properties for this owner',
+        });
+      } else {
+        setLinkedOwner(null);
+      }
+    } else if (linkedOwner && !ownerIdMatch) {
+      // If user clears or modifies name to non-ID pattern, keep linked owner but allow name edit
+    }
+  }, [owners, language, linkedOwner]);
+
+  // Clear linked owner
+  const handleClearLinkedOwner = () => {
+    setLinkedOwner(null);
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      nid: '',
+      emergency_contact: '',
+      flat_ids: [],
+      ownership_start: new Date().toISOString().split('T')[0],
+    });
+  };
+
   useEffect(() => {
     if (editData) {
       setFormData({
@@ -109,6 +172,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
         occupancy[flatId] = flat?.status === 'owner-occupied' ? 'owner-occupied' : 'for-rent';
       });
       setFlatOccupancy(occupancy);
+      setLinkedOwner(null);
       
       // Set the building from existing flats
       if (existingFlatIds.length > 0) {
@@ -136,6 +200,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
       setFromFlatNumber('');
       setToFlatNumber('');
       setStartFloor('1');
+      setLinkedOwner(null);
     }
   }, [editData, existingFlatIds, open, flats]);
 
@@ -150,7 +215,7 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
       emergency_contact: formData.emergency_contact || null,
       flat_id: formData.flat_ids[0] || null,
       ownership_start: formData.ownership_start,
-      flat_ids: formData.flat_ids,
+      flat_ids: linkedOwner ? [...linkedOwnerFlatIds, ...formData.flat_ids] : formData.flat_ids,
       flat_occupancy: flatOccupancy,
       // For new property with multiple flats
       new_property: isNewProperty ? {
@@ -168,7 +233,10 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
       } : null,
     };
 
-    if (editData) {
+    // If linked to existing owner, update that owner instead of creating new
+    if (linkedOwner && !editData) {
+      await updateOwner.mutateAsync({ id: linkedOwner.id, ...data });
+    } else if (editData) {
       await updateOwner.mutateAsync({ id: editData.id, ...data });
     } else {
       await createOwner.mutateAsync(data);
@@ -230,10 +298,14 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
   };
 
   const t = {
-    title: editData 
-      ? (language === 'bn' ? 'মালিক সম্পাদনা' : 'Edit Owner')
-      : (language === 'bn' ? 'নতুন মালিক যুক্ত করুন' : 'Add New Owner'),
-    description: language === 'bn' ? 'ফ্ল্যাট মালিকের তথ্য দিন' : 'Enter flat owner details',
+    title: linkedOwner && !editData
+      ? (language === 'bn' ? 'মালিকে প্রপার্টি যুক্ত করুন' : 'Add Property to Owner')
+      : editData 
+        ? (language === 'bn' ? 'মালিক সম্পাদনা' : 'Edit Owner')
+        : (language === 'bn' ? 'নতুন মালিক যুক্ত করুন' : 'Add New Owner'),
+    description: linkedOwner && !editData
+      ? (language === 'bn' ? `O${linkedOwner.owner_number} - ${linkedOwner.name} এর জন্য প্রপার্টি নির্বাচন করুন` : `Select properties for O${linkedOwner.owner_number} - ${linkedOwner.name}`)
+      : (language === 'bn' ? 'ফ্ল্যাট মালিকের তথ্য দিন' : 'Enter flat owner details'),
     name: language === 'bn' ? 'নাম' : 'Name',
     namePlaceholder: language === 'bn' ? 'মালিকের নাম' : 'Owner name',
     property: language === 'bn' ? 'প্রপার্টি/বিল্ডিং' : 'Property/Building',
@@ -248,9 +320,11 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
     emergency: language === 'bn' ? 'জরুরি যোগাযোগ' : 'Emergency Contact',
     ownershipStart: language === 'bn' ? 'মালিকানা শুরু' : 'Ownership Start',
     cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
-    submit: editData 
-      ? (language === 'bn' ? 'আপডেট করুন' : 'Update')
-      : (language === 'bn' ? 'যুক্ত করুন' : 'Add'),
+    submit: linkedOwner && !editData
+      ? (language === 'bn' ? 'প্রপার্টি যুক্ত করুন' : 'Add Property')
+      : editData 
+        ? (language === 'bn' ? 'আপডেট করুন' : 'Update')
+        : (language === 'bn' ? 'যুক্ত করুন' : 'Add'),
     floor: language === 'bn' ? 'তলা' : 'Floor',
     tenant: language === 'bn' ? 'ভাড়াটে আছে' : 'Has Tenant',
     vacant: language === 'bn' ? 'খালি' : 'Vacant',
@@ -266,8 +340,12 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
     addNewProperty: language === 'bn' ? '+ নতুন প্রপার্টি যুক্ত করুন' : '+ Add Property',
   };
 
-  const canSubmit = formData.name && formData.phone && 
-    ((formData.flat_ids.length > 0) || (isNewProperty && fromFlatNumber && newPropertyName) || (isAddingNewProperty && fromFlatNumber));
+  // When linked to existing owner, only require new flats (or new property creation)
+  const hasNewFlatsToAdd = formData.flat_ids.length > 0 || (isNewProperty && fromFlatNumber && newPropertyName) || (isAddingNewProperty && fromFlatNumber);
+  
+  const canSubmit = linkedOwner 
+    ? hasNewFlatsToAdd
+    : (formData.name && formData.phone && hasNewFlatsToAdd);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -280,13 +358,43 @@ export const OwnerForm = ({ open, onOpenChange, editData, existingFlatIds = [] }
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">{t.name} *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={t.namePlaceholder}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder={linkedOwner ? '' : (language === 'bn' ? 'নাম বা মালিক ID (যেমন: O1)' : 'Name or Owner ID (e.g., O1)')}
+                required
+                className={linkedOwner ? 'pr-10' : ''}
+              />
+              {linkedOwner && (
+                <UserCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              )}
+            </div>
+            {linkedOwner && !editData && (
+              <div className="mt-2 p-2 bg-primary/10 border border-primary/20 rounded-md">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-primary flex items-center gap-1">
+                    <UserCheck className="h-4 w-4" />
+                    {language === 'bn' ? `মালিক O${linkedOwner.owner_number} এর সাথে সংযুক্ত` : `Linked to Owner O${linkedOwner.owner_number}`}
+                  </span>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 text-xs"
+                    onClick={handleClearLinkedOwner}
+                  >
+                    {language === 'bn' ? 'বাতিল' : 'Clear'}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === 'bn' 
+                    ? 'নতুন প্রপার্টি এই মালিকের অ্যাকাউন্টে যোগ হবে' 
+                    : 'New properties will be added to this owner\'s account'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Property/Building Selection */}
