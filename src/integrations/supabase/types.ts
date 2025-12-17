@@ -282,6 +282,7 @@ export type Database = {
           id: string
           name: string
           nid: string | null
+          owner_number: number
           ownership_start: string
           phone: string
           updated_at: string
@@ -295,6 +296,7 @@ export type Database = {
           id?: string
           name: string
           nid?: string | null
+          owner_number?: number
           ownership_start?: string
           phone: string
           updated_at?: string
@@ -308,6 +310,7 @@ export type Database = {
           id?: string
           name?: string
           nid?: string | null
+          owner_number?: number
           ownership_start?: string
           phone?: string
           updated_at?: string
@@ -490,6 +493,7 @@ export type Database = {
           rent_amount: number
           security_deposit: number | null
           start_date: string
+          tenant_number: number
           updated_at: string
           user_id: string | null
         }
@@ -511,6 +515,7 @@ export type Database = {
           rent_amount: number
           security_deposit?: number | null
           start_date?: string
+          tenant_number?: number
           updated_at?: string
           user_id?: string | null
         }
@@ -532,6 +537,7 @@ export type Database = {
           rent_amount?: number
           security_deposit?: number | null
           start_date?: string
+          tenant_number?: number
           updated_at?: string
           user_id?: string | null
         }
