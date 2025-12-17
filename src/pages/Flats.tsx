@@ -4,7 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { useFlats, useUpdateFlat, useCreateFlat, useDeleteFlat, useReorderFlats, Flat } from '@/hooks/useFlats';
 import { useOwners, useUpdateOwner, Owner } from '@/hooks/useOwners';
 import { useTenants, useUpdateTenant, Tenant } from '@/hooks/useTenants';
-import { useAllOwnerFlats } from '@/hooks/useOwnerFlats';
+import { useAllOwnerFlats, useRemoveOwnerFlat } from '@/hooks/useOwnerFlats';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { 
   Search, Building2, User, Phone, Mail, Car, Plus, Pencil, Trash2, 
-  MapPin, Home, BarChart3, GripVertical, Save, X, Shield 
+  MapPin, Home, BarChart3, GripVertical, Save, X, Shield, Unlink 
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
@@ -75,6 +75,7 @@ const Flats = () => {
   const createFlat = useCreateFlat();
   const deleteFlat = useDeleteFlat();
   const reorderFlats = useReorderFlats();
+  const removeOwnerFlat = useRemoveOwnerFlat();
   const updateOwner = useUpdateOwner();
   const updateTenant = useUpdateTenant();
   
@@ -90,6 +91,7 @@ const Flats = () => {
   const [editOwnerData, setEditOwnerData] = useState<any>(null);
   const [editOwnerFlatIds, setEditOwnerFlatIds] = useState<string[]>([]);
   const [isReorderMode, setIsReorderMode] = useState(false);
+  const [unlinkConfirm, setUnlinkConfirm] = useState<{ ownerId: string; flatId: string; flatNumber: string } | null>(null);
   const [orderedFlats, setOrderedFlats] = useState<Flat[]>([]);
 
   const sensors = useSensors(
@@ -556,6 +558,7 @@ const Flats = () => {
                                       <Button 
                                         variant="ghost" 
                                         size="icon"
+                                        title={language === 'bn' ? 'সম্পাদনা' : 'Edit Flat'}
                                         onClick={() => {
                                           const fullFlat = flats?.find(f => f.id === flat.id);
                                           if (fullFlat) handleEdit(fullFlat);
@@ -566,13 +569,14 @@ const Flats = () => {
                                       <Button 
                                         variant="ghost" 
                                         size="icon"
-                                        onClick={() => {
-                                          const fullFlat = flats?.find(f => f.id === flat.id);
-                                          if (fullFlat) handleDelete(fullFlat);
-                                        }}
-                                        disabled={flat.status !== 'vacant'}
+                                        title={language === 'bn' ? 'মালিক থেকে সংযোগ বিচ্ছিন্ন' : 'Unlink from Owner'}
+                                        onClick={() => setUnlinkConfirm({ 
+                                          ownerId: ownerId, 
+                                          flatId: flat.id, 
+                                          flatNumber: flat.flat_number 
+                                        })}
                                       >
-                                        <Trash2 className={`h-4 w-4 ${flat.status === 'vacant' ? 'text-destructive' : 'text-muted-foreground'}`} />
+                                        <Trash2 className="h-4 w-4 text-destructive" />
                                       </Button>
                                     </div>
                                   </TableCell>
@@ -827,6 +831,40 @@ const Flats = () => {
               disabled={deleteConfirm?.status !== 'vacant'}
             >
               {language === 'bn' ? 'মুছুন' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unlink Property from Owner Confirmation */}
+      <AlertDialog open={!!unlinkConfirm} onOpenChange={() => setUnlinkConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'bn' ? 'সম্পত্তি সরাতে চান?' : 'Remove Property?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'bn' 
+                ? `ফ্ল্যাট ${unlinkConfirm?.flatNumber} এই মালিক থেকে সরানো হবে। ফ্ল্যাটটি ভ্যাকেন্ট হিসেবে চিহ্নিত হবে।`
+                : `Flat ${unlinkConfirm?.flatNumber} will be removed from this owner. The flat will be marked as vacant.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{language === 'bn' ? 'বাতিল' : 'Cancel'}</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (unlinkConfirm) {
+                  removeOwnerFlat.mutate({ 
+                    ownerId: unlinkConfirm.ownerId, 
+                    flatId: unlinkConfirm.flatId 
+                  });
+                  setUnlinkConfirm(null);
+                }
+              }} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {language === 'bn' ? 'সরান' : 'Remove'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

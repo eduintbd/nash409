@@ -114,12 +114,19 @@ export const useRemoveOwnerFlat = () => {
         .eq('owner_id', ownerId)
         .eq('flat_id', flatId);
       if (error) throw error;
+      
+      // Update flat status back to vacant
+      await supabase
+        .from('flats')
+        .update({ status: 'vacant' })
+        .eq('id', flatId);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['owner-flats', variables.ownerId] });
       queryClient.invalidateQueries({ queryKey: ['my-owner-flats'] });
+      queryClient.invalidateQueries({ queryKey: ['all-owner-flats'] });
       queryClient.invalidateQueries({ queryKey: ['flats'] });
-      toast({ title: 'Flat removed from owner' });
+      toast({ title: 'Property removed from owner' });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
