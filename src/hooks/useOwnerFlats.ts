@@ -16,7 +16,7 @@ export const useAllOwnerFlats = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('owner_flats')
-        .select('*, flats(*), owners(id, name, phone, email)')
+        .select('*, flats(*), owners(id, name, phone, email, owner_number)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
