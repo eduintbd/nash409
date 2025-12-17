@@ -16,7 +16,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -40,61 +39,6 @@ const Cameras = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [newCamera, setNewCamera] = useState({ name: '', location: '', camera_id: '' });
-  const [rtspUrlByCameraId, setRtspUrlByCameraId] = useState<Record<string, string>>({});
-  const [rtspCredentials, setRtspCredentials] = useState<Record<string, { username: string; password: string }>>({});
-
-  const getCredentials = (cameraId: string) => rtspCredentials[cameraId] || { username: '', password: '' };
-
-  const setCredentialsForCamera = (cameraId: string, field: 'username' | 'password', value: string) => {
-    setRtspCredentials((prev) => ({
-      ...prev,
-      [cameraId]: { ...getCredentials(cameraId), [field]: value },
-    }));
-  };
-
-  const encodeRtspCredentialPart = (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    try {
-      // Users sometimes paste already-encoded values (e.g. %40). Decode + re-encode to avoid double-encoding.
-      return encodeURIComponent(decodeURIComponent(trimmed));
-    } catch {
-      return encodeURIComponent(trimmed);
-    }
-  };
-
-  const buildRtspUrl = (ip: string, port: string, path: string, username?: string, password?: string) => {
-    const u = username ? encodeRtspCredentialPart(username) : '';
-    const p = password ? encodeRtspCredentialPart(password) : '';
-
-    if (u && p) {
-      return `rtsp://${u}:${p}@${ip}:${port}${path}`;
-    }
-
-    return `rtsp://${ip}:${port}${path}`;
-  };
-
-  const getDefaultRtspUrl = (ip: string, username?: string, password?: string) => 
-    buildRtspUrl(ip, '554', '/live/ch00_0', username, password);
-
-  const getRtspUrl = (camera: any) => {
-    if (!camera?.camera_id) return '';
-    const creds = getCredentials(camera.id);
-    const customUrl = rtspUrlByCameraId[camera.id];
-    if (customUrl) return customUrl;
-    return getDefaultRtspUrl(camera.camera_id, creds.username, creds.password);
-  };
-
-  const setRtspUrlForCamera = (cameraId: string, value: string) => {
-    setRtspUrlByCameraId((prev) => ({ ...prev, [cameraId]: value }));
-  };
-
-  const getRtspCandidates = (ip: string, username?: string, password?: string) => [
-    { key: '554_ch00_0', label: '554 ch00_0', url: buildRtspUrl(ip, '554', '/live/ch00_0', username, password) },
-    { key: '554_ch00_1', label: '554 ch00_1', url: buildRtspUrl(ip, '554', '/live/ch00_1', username, password) },
-    { key: '8554_ch00_0', label: '8554 ch00_0', url: buildRtspUrl(ip, '8554', '/live/ch00_0', username, password) },
-    { key: 'h264_main', label: 'h264 main', url: buildRtspUrl(ip, '554', '/h264Preview_01_main', username, password) },
-  ];
 
   const onlineCount = cameras?.filter(c => c.status === 'online').length || 0;
 
@@ -135,29 +79,24 @@ const Cameras = () => {
     window.open(`http://${ip}`, '_blank');
   };
 
-  const openInVLC = (rtspUrl: string, name: string) => {
-    if (!rtspUrl) return;
-
-    // Create a .m3u playlist file that VLC will open (force RTSP over TCP for better reliability)
-    const safeName = name.replace(/\s+/g, '_');
-    const playlistContent = `#EXTM3U\n#EXTVLCOPT:rtsp-tcp\n#EXTVLCOPT:network-caching=1000\n#EXTINF:-1,${name}\n${rtspUrl}\n`;
-
+  const openInVLC = (ip: string, name: string) => {
+    const rtspUrl = `rtsp://${ip}:554/live/ch00_0`;
+    // Create a .m3u playlist file that VLC will open
+    const playlistContent = `#EXTM3U\n#EXTINF:-1,${name}\n${rtspUrl}`;
     const blob = new Blob([playlistContent], { type: 'audio/x-mpegurl' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${safeName}.m3u`;
+    a.download = `${name.replace(/\s+/g, '_')}.m3u`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
     toast({
       title: language === 'bn' ? 'ফাইল ডাউনলোড হয়েছে' : 'File Downloaded',
-      description:
-        language === 'bn'
-          ? 'ডাউনলোড করা .m3u ফাইলটি VLC দিয়ে খুলুন (না খুললে: Right click → Open with → VLC)'
-          : 'Open the downloaded .m3u file with VLC (if it doesn’t open: right click → Open with → VLC)',
+      description: language === 'bn' 
+        ? 'ডাউনলোড করা .m3u ফাইলটি খুলুন - VLC স্বয়ংক্রিয়ভাবে শুরু হবে' 
+        : 'Open the downloaded .m3u file - VLC will start automatically',
     });
   };
 
@@ -222,36 +161,33 @@ const Cameras = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {cameras?.map((camera) => (
               <Card key={camera.id} className="stat-card border-0 overflow-hidden">
-                {/* Camera Preview */}
-                <div className="aspect-video bg-muted/30 relative flex items-center justify-center">
+                {/* Camera Preview - Try iframe embed */}
+                <div className="aspect-video bg-muted/30 relative">
                   {camera.status === 'online' && camera.camera_id ? (
-                    <div className="text-center p-4">
-                      <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-3">
-                        <Wifi className="h-8 w-8 text-success" />
-                      </div>
-                      <p className="text-sm font-medium text-foreground">
-                        {language === 'bn' ? 'ক্যামেরা সংযুক্ত' : 'Camera Connected'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        IP: {camera.camera_id}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {language === 'bn' 
-                          ? 'VLC বা V380 Pro অ্যাপ দিয়ে দেখুন'
-                          : 'View with VLC or V380 Pro app'}
-                      </p>
-                    </div>
-                  ) : camera.status === 'online' ? (
-                    <div className="text-center p-4">
-                      <Camera className="h-12 w-12 text-muted-foreground/50 mx-auto" />
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {language === 'bn' ? 'IP ঠিকানা যুক্ত করুন' : 'Add IP address to view'}
-                      </p>
-                    </div>
+                    <iframe
+                      src={`http://${camera.camera_id}`}
+                      className="w-full h-full border-0"
+                      title={camera.name}
+                      sandbox="allow-same-origin allow-scripts"
+                      onError={(e) => {
+                        console.log('Iframe load error:', e);
+                      }}
+                    />
                   ) : (
-                    <div className="text-center">
-                      <WifiOff className="h-12 w-12 text-destructive/50 mx-auto" />
-                      <p className="text-xs text-destructive mt-2">{t.cameras.offline}</p>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {camera.status === 'online' ? (
+                        <div className="text-center p-4">
+                          <Camera className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+                          <p className="text-sm text-muted-foreground mt-2">
+                            {language === 'bn' ? 'IP ঠিকানা যুক্ত করুন' : 'Add IP address to view'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <WifiOff className="h-12 w-12 text-destructive/50 mx-auto" />
+                          <p className="text-xs text-destructive mt-2">{t.cameras.offline}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -294,80 +230,28 @@ const Cameras = () => {
                 
                 <CardContent className="space-y-3">
                   {camera.camera_id && (
-                    <div className="p-3 rounded-lg bg-muted/50 space-y-3">
+                    <div className="p-3 rounded-lg bg-muted/50 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">IP: {camera.camera_id}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
                           className="h-7 w-7"
                           onClick={() => copyToClipboard(camera.camera_id!)}
                         >
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-
-                      {/* RTSP Credentials */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs">{language === 'bn' ? 'ইউজারনেম' : 'Username'}</Label>
-                          <Input
-                            value={getCredentials(camera.id).username}
-                            onChange={(e) => setCredentialsForCamera(camera.id, 'username', e.target.value)}
-                            className="h-8 text-xs"
-                            placeholder="admin"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">{language === 'bn' ? 'পাসওয়ার্ড' : 'Password'}</Label>
-                          <Input
-                            type="password"
-                            value={getCredentials(camera.id).password}
-                            onChange={(e) => setCredentialsForCamera(camera.id, 'password', e.target.value)}
-                            className="h-8 text-xs"
-                            placeholder="••••••••"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            {language === 'bn' ? 'RTSP লিংক' : 'RTSP URL'}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => copyToClipboard(getRtspUrl(camera))}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                        <Input
-                          value={getRtspUrl(camera)}
-                          onChange={(e) => setRtspUrlForCamera(camera.id, e.target.value)}
-                          className="h-9 text-xs"
-                          placeholder="rtsp://user:pass@192.168.0.102:554/live/ch00_0"
-                        />
-                        <div className="flex flex-wrap gap-1">
-                          {getRtspCandidates(camera.camera_id, getCredentials(camera.id).username, getCredentials(camera.id).password).map((opt) => (
-                            <Button
-                              key={opt.key}
-                              variant="outline"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => setRtspUrlForCamera(camera.id, opt.url)}
-                            >
-                              {opt.label}
-                            </Button>
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {language === 'bn'
-                            ? 'ইউজার/পাসওয়ার্ড সাধারণভাবে লিখুন (যেমন @ থাকলে %40 দেবেন না) তারপর একটি স্ট্রিম বাটনে ক্লিক করুন।'
-                            : 'Type username/password normally (don’t manually encode like %40), then click a stream button.'}
-                        </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">RTSP: rtsp://{camera.camera_id}:554/live/ch00_0</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7"
+                          onClick={() => copyToClipboard(`rtsp://${camera.camera_id}:554/live/ch00_0`)}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -388,7 +272,7 @@ const Cameras = () => {
                       size="sm" 
                       className="w-full text-xs md:text-sm px-2 md:px-3"
                       disabled={!camera.camera_id || camera.status === 'offline'}
-                      onClick={() => openInVLC(getRtspUrl(camera), camera.name)}
+                      onClick={() => camera.camera_id && openInVLC(camera.camera_id, camera.name)}
                     >
                       <Play className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
                       <span className="hidden md:inline">VLC</span>
@@ -422,14 +306,11 @@ const Cameras = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t.common.add} {t.cameras.title}</DialogTitle>
-            <DialogDescription>
-              {language === 'bn' ? 'নতুন IP ক্যামেরা যোগ করুন' : 'Add a new IP camera'}
-            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>{t.common.name}</Label>
-              <Input
+              <Input 
                 value={newCamera.name} 
                 onChange={(e) => setNewCamera({ ...newCamera, name: e.target.value })}
                 placeholder="Main Gate Camera"
