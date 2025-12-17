@@ -10,13 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useCreateFlat } from '@/hooks/useFlats';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
@@ -32,14 +25,38 @@ export const PropertyForm = ({ open, onOpenChange }: PropertyFormProps) => {
   
   const [formData, setFormData] = useState({
     propertyName: '',
-    numberOfFlats: '1',
-    fromFlatNumber: '1',
-    toFlatNumber: '',
-    startFloor: '2',
+    numberOfFlats: '',
+    flatNumberPrefix: '',
+    startFloor: '',
     address: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Generate preview of flat numbers based on inputs
+  const getFlatNumbersPreview = () => {
+    const numFlats = parseInt(formData.numberOfFlats) || 0;
+    const prefix = formData.flatNumberPrefix.trim();
+    const startFloor = parseInt(formData.startFloor) || 2;
+    
+    if (!numFlats || !prefix) return [];
+    
+    const flatNumbers = [];
+    const flatsPerFloor = 4;
+    
+    for (let i = 0; i < numFlats && i < 12; i++) {
+      const floor = startFloor + Math.floor(i / flatsPerFloor);
+      const flatIndex = i % flatsPerFloor;
+      const flatLetter = String.fromCharCode(65 + flatIndex); // A, B, C, D
+      flatNumbers.push(`${prefix}-${floor}${flatLetter}`);
+    }
+    
+    if (numFlats > 12) {
+      flatNumbers.push('...');
+    }
+    
+    return flatNumbers;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,18 +64,18 @@ export const PropertyForm = ({ open, onOpenChange }: PropertyFormProps) => {
     
     try {
       const numFlats = parseInt(formData.numberOfFlats) || 1;
-      const fromFlat = parseInt(formData.fromFlatNumber) || 1;
+      const prefix = formData.flatNumberPrefix.trim();
       const startFloor = parseInt(formData.startFloor) || 2;
       
       // Generate flats for the property
       const flatsToCreate = [];
-      const flatsPerFloor = 4; // Default flats per floor
+      const flatsPerFloor = 4;
       
       for (let i = 0; i < numFlats; i++) {
         const floor = startFloor + Math.floor(i / flatsPerFloor);
         const flatIndex = i % flatsPerFloor;
         const flatLetter = String.fromCharCode(65 + flatIndex); // A, B, C, D
-        const flatNumber = `${floor}${flatLetter}`;
+        const flatNumber = `${prefix}-${floor}${flatLetter}`;
         
         flatsToCreate.push({
           building_name: formData.propertyName,
@@ -85,10 +102,9 @@ export const PropertyForm = ({ open, onOpenChange }: PropertyFormProps) => {
       // Reset form
       setFormData({
         propertyName: '',
-        numberOfFlats: '1',
-        fromFlatNumber: '1',
-        toFlatNumber: '',
-        startFloor: '2',
+        numberOfFlats: '',
+        flatNumberPrefix: '',
+        startFloor: '',
         address: '',
       });
     } catch (error) {
@@ -99,21 +115,23 @@ export const PropertyForm = ({ open, onOpenChange }: PropertyFormProps) => {
   };
 
   const t = {
-    title: language === 'bn' ? 'নতুন প্রপার্টি যুক্ত করুন' : 'Add Property',
+    title: language === 'bn' ? 'প্রপার্টি যুক্ত করুন' : 'Add Property',
     description: language === 'bn' ? 'প্রপার্টির বিস্তারিত তথ্য দিন' : 'Enter property details',
     propertyName: language === 'bn' ? 'প্রপার্টির নাম' : 'Property Name',
     propertyNamePlaceholder: language === 'bn' ? 'যেমন: গ্রিন ভিউ টাওয়ার' : 'e.g., Green View Tower',
     numberOfFlats: language === 'bn' ? 'ফ্ল্যাট সংখ্যা' : 'Number of Flats',
-    fromFlatNumber: language === 'bn' ? 'শুরু ফ্ল্যাট নম্বর' : 'From Flat Number',
-    toFlatNumber: language === 'bn' ? 'শেষ ফ্ল্যাট নম্বর' : 'To Flat Number',
+    flatNumberPrefix: language === 'bn' ? 'ফ্ল্যাট নম্বর প্রিফিক্স' : 'Flat Number Prefix',
+    flatNumberPrefixPlaceholder: language === 'bn' ? 'যেমন: NB, FL, GV' : 'e.g., NB, FL, GV',
     startFloor: language === 'bn' ? 'শুরু তলা' : 'Starting Floor',
     address: language === 'bn' ? 'ঠিকানা' : 'Address',
     addressPlaceholder: language === 'bn' ? 'প্রপার্টির ঠিকানা লিখুন' : 'Enter property address',
     cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
     submit: language === 'bn' ? 'প্রপার্টি তৈরি করুন' : 'Create Property',
+    preview: language === 'bn' ? 'ফ্ল্যাট নম্বর প্রিভিউ' : 'Flat Numbers Preview',
   };
 
-  const canSubmit = formData.propertyName && formData.numberOfFlats;
+  const flatNumbersPreview = getFlatNumbersPreview();
+  const canSubmit = formData.propertyName && formData.numberOfFlats && formData.flatNumberPrefix && formData.startFloor;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,61 +169,46 @@ export const PropertyForm = ({ open, onOpenChange }: PropertyFormProps) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="fromFlatNumber">{t.fromFlatNumber}</Label>
-              <Select 
-                value={formData.fromFlatNumber} 
-                onValueChange={(value) => setFormData({ ...formData, fromFlatNumber: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={language === 'bn' ? 'নির্বাচন করুন' : 'Select'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5].map(num => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="flatNumberPrefix">{t.flatNumberPrefix} *</Label>
+              <Input
+                id="flatNumberPrefix"
+                value={formData.flatNumberPrefix}
+                onChange={(e) => setFormData({ ...formData, flatNumberPrefix: e.target.value.toUpperCase() })}
+                placeholder={t.flatNumberPrefixPlaceholder}
+                required
+              />
             </div>
             <div>
-              <Label htmlFor="toFlatNumber">{t.toFlatNumber}</Label>
-              <Select 
-                value={formData.toFlatNumber} 
-                onValueChange={(value) => setFormData({ ...formData, toFlatNumber: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={language === 'bn' ? 'নির্বাচন করুন' : 'Select'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5].map(num => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="startFloor">{t.startFloor} *</Label>
+              <Input
+                id="startFloor"
+                type="number"
+                min="1"
+                max="50"
+                value={formData.startFloor}
+                onChange={(e) => setFormData({ ...formData, startFloor: e.target.value })}
+                placeholder="2"
+                required
+              />
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="startFloor">{t.startFloor} *</Label>
-            <Select 
-              value={formData.startFloor} 
-              onValueChange={(value) => setFormData({ ...formData, startFloor: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(floor => (
-                  <SelectItem key={floor} value={floor.toString()}>
-                    {floor}
-                  </SelectItem>
+          {/* Flat Numbers Preview */}
+          {flatNumbersPreview.length > 0 && (
+            <div className="p-3 rounded-lg bg-muted/50 border">
+              <Label className="text-xs text-muted-foreground">{t.preview}</Label>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {flatNumbersPreview.map((num, idx) => (
+                  <span 
+                    key={idx} 
+                    className="px-2 py-0.5 text-xs rounded bg-primary/10 text-primary font-mono"
+                  >
+                    {num}
+                  </span>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="address">{t.address}</Label>
