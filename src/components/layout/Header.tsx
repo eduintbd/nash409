@@ -1,4 +1,4 @@
-import { Bell, Search, Menu, LogOut, User, Shield } from 'lucide-react';
+import { Bell, Search, LogOut, User, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -41,18 +41,15 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="lg:hidden">
-          <Menu className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
+      <div className="flex items-center gap-3 pl-12 lg:pl-0 min-w-0 flex-1">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg lg:text-xl font-semibold text-foreground truncate">{title}</h1>
           {subtitle && (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
+            <p className="text-xs lg:text-sm text-muted-foreground line-clamp-1">{subtitle}</p>
           )}
         </div>
-        {actions && <div className="ml-4">{actions}</div>}
+        {actions && <div className="flex-shrink-0">{actions}</div>}
       </div>
 
       <div className="flex items-center gap-3">
