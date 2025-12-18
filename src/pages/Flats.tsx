@@ -448,16 +448,10 @@ const Flats = () => {
                     className="pl-9"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => { setEditOwnerData(null); setEditOwnerFlatIds([]); setShowOwnerForm(true); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    {language === 'bn' ? 'নতুন মালিক' : 'Add New Owner'}
-                  </Button>
-                  <Button onClick={() => setShowPropertyForm(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    {language === 'bn' ? 'নতুন প্রপার্টি' : 'Add Property'}
-                  </Button>
-                </div>
+                <Button onClick={() => setShowPropertyForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {language === 'bn' ? 'নতুন প্রপার্টি' : 'Add Property'}
+                </Button>
               </div>
 
               {/* Owner Properties Cards */}
