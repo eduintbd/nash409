@@ -11,31 +11,34 @@ export interface DashboardCard {
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'destructive';
   customValue?: string;
   customValueBn?: string;
+  link?: string;
 }
 
 const DEFAULT_ADMIN_CARDS: DashboardCard[] = [
-  { id: 'property-overview', title: 'Property Overview', titleBn: 'প্রপার্টি সারসংক্ষেপ', type: 'stat', visible: true, order: 0, icon: 'Building2', variant: 'primary' },
+  { id: 'property-overview', title: 'Property Overview', titleBn: 'প্রপার্টি সারসংক্ষেপ', type: 'stat', visible: true, order: 0, icon: 'Building2', variant: 'primary', link: '/flats' },
   { id: 'financial-summary', title: 'Financial Summary', titleBn: 'আর্থিক সারসংক্ষেপ', type: 'stat', visible: true, order: 1, icon: 'Wallet', variant: 'primary' },
-  { id: 'service-requests', title: 'Service Requests', titleBn: 'সার্ভিস অনুরোধ', type: 'stat', visible: true, order: 2, icon: 'Wrench', variant: 'destructive' },
+  { id: 'service-requests', title: 'Service Requests', titleBn: 'সার্ভিস অনুরোধ', type: 'stat', visible: true, order: 2, icon: 'Wrench', variant: 'destructive', link: '/service-requests' },
 ];
 
 const DEFAULT_OWNER_CARDS: DashboardCard[] = [
-  { id: 'my-flats', title: 'My Flats', titleBn: 'আমার ফ্ল্যাটসমূহ', type: 'stat', visible: true, order: 0, icon: 'Home', variant: 'primary' },
-  { id: 'monthly-rent-income', title: 'Monthly Rent Income', titleBn: 'মাসিক ভাড়া আয়', type: 'stat', visible: true, order: 1, icon: 'TrendingUp', variant: 'success' },
-  { id: 'monthly-rent-due', title: 'Monthly Rent Due', titleBn: 'মাসিক বকেয়া ভাড়া', type: 'stat', visible: true, order: 2, icon: 'Receipt', variant: 'warning' },
-  { id: 'service-charge-paid', title: 'Paid Service Charge', titleBn: 'পরিশোধিত সার্ভিস চার্জ', type: 'stat', visible: true, order: 3, icon: 'Wallet', variant: 'success' },
-  { id: 'service-charge-pending', title: 'Pending Service Charge', titleBn: 'বকেয়া সার্ভিস চার্জ', type: 'stat', visible: true, order: 4, icon: 'TrendingDown', variant: 'warning' },
-  { id: 'total-rental-income', title: 'Total Rental Income', titleBn: 'মোট ভাড়া আয়', type: 'stat', visible: true, order: 5, icon: 'TrendingUp', variant: 'success' },
-  { id: 'total-pending', title: 'Total Pending', titleBn: 'মোট বকেয়া', type: 'stat', visible: true, order: 6, icon: 'Receipt', variant: 'warning' },
-  { id: 'open-requests', title: 'Service Requests', titleBn: 'সার্ভিস অনুরোধ', type: 'stat', visible: true, order: 7, icon: 'Wrench', variant: 'destructive' },
+  { id: 'property-overview', title: 'My Properties', titleBn: 'আমার ফ্ল্যাট', type: 'stat', visible: true, order: 0, icon: 'Home', variant: 'primary', link: '/my-properties' },
+  { id: 'financial-summary', title: 'Financial Summary', titleBn: 'আর্থিক সারসংক্ষেপ', type: 'stat', visible: true, order: 1, icon: 'Wallet', variant: 'primary' },
+  { id: 'service-requests', title: 'Service Requests', titleBn: 'সার্ভিস অনুরোধ', type: 'stat', visible: true, order: 2, icon: 'Wrench', variant: 'destructive', link: '/service-requests' },
+];
+
+const DEFAULT_TENANT_CARDS: DashboardCard[] = [
+  { id: 'property-overview', title: 'My Flat', titleBn: 'আমার ফ্ল্যাট', type: 'stat', visible: true, order: 0, icon: 'Home', variant: 'primary' },
+  { id: 'financial-summary', title: 'Financial Summary', titleBn: 'আর্থিক সারসংক্ষেপ', type: 'stat', visible: true, order: 1, icon: 'Wallet', variant: 'primary' },
+  { id: 'service-requests', title: 'Service Requests', titleBn: 'সার্ভিস অনুরোধ', type: 'stat', visible: true, order: 2, icon: 'Wrench', variant: 'destructive', link: '/service-requests' },
 ];
 
 const STORAGE_KEY_ADMIN = 'dashboard_cards_admin';
 const STORAGE_KEY_OWNER = 'dashboard_cards_owner';
+const STORAGE_KEY_TENANT = 'dashboard_cards_tenant';
 
-export function useDashboardCards(role: 'admin' | 'owner') {
-  const storageKey = role === 'admin' ? STORAGE_KEY_ADMIN : STORAGE_KEY_OWNER;
-  const defaultCards = role === 'admin' ? DEFAULT_ADMIN_CARDS : DEFAULT_OWNER_CARDS;
+export function useDashboardCards(role: 'admin' | 'owner' | 'tenant') {
+  const storageKey = role === 'admin' ? STORAGE_KEY_ADMIN : role === 'owner' ? STORAGE_KEY_OWNER : STORAGE_KEY_TENANT;
+  const defaultCards = role === 'admin' ? DEFAULT_ADMIN_CARDS : role === 'owner' ? DEFAULT_OWNER_CARDS : DEFAULT_TENANT_CARDS;
 
   const [cards, setCards] = useState<DashboardCard[]>(() => {
     const stored = localStorage.getItem(storageKey);
