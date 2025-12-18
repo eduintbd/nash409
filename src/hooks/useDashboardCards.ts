@@ -15,10 +15,8 @@ export interface DashboardCard {
 
 const DEFAULT_ADMIN_CARDS: DashboardCard[] = [
   { id: 'property-overview', title: 'Property Overview', titleBn: 'প্রপার্টি সারসংক্ষেপ', type: 'stat', visible: true, order: 0, icon: 'Building2', variant: 'primary' },
-  { id: 'pending-payments', title: 'Pending Payments', titleBn: 'বকেয়া পেমেন্ট', type: 'stat', visible: true, order: 1, icon: 'Receipt', variant: 'warning' },
+  { id: 'financial-summary', title: 'Financial Summary', titleBn: 'আর্থিক সারসংক্ষেপ', type: 'stat', visible: true, order: 1, icon: 'Wallet', variant: 'primary' },
   { id: 'service-requests', title: 'Service Requests', titleBn: 'সার্ভিস অনুরোধ', type: 'stat', visible: true, order: 2, icon: 'Wrench', variant: 'destructive' },
-  { id: 'total-income', title: 'Total Income', titleBn: 'মোট আয়', type: 'stat', visible: true, order: 3, icon: 'TrendingUp', variant: 'success' },
-  { id: 'total-expenses', title: 'Total Expenses', titleBn: 'মোট খরচ', type: 'stat', visible: true, order: 4, icon: 'TrendingDown', variant: 'destructive' },
 ];
 
 const DEFAULT_OWNER_CARDS: DashboardCard[] = [

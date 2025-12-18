@@ -5,6 +5,7 @@ import { CustomStatCard } from '@/components/dashboard/CustomStatCard';
 import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer';
 import { DraggableDashboardGrid } from '@/components/dashboard/DraggableDashboardGrid';
 import { PropertyOverviewCard } from '@/components/dashboard/PropertyOverviewCard';
+import { FinancialSummaryCard } from '@/components/dashboard/FinancialSummaryCard';
 import { useFlats } from '@/hooks/useFlats';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
@@ -441,10 +442,7 @@ const Dashboard = () => {
   // Card link mapping
   const cardLinks: Record<string, string> = {
     'property-overview': '/flats',
-    'pending-payments': '/invoices',
     'service-requests': '/service-requests',
-    'total-income': '/invoices',
-    'total-expenses': '/expenses',
   };
 
   // Build admin card content map
@@ -473,21 +471,14 @@ const Dashboard = () => {
           />,
           card.id
         );
-      case 'pending-payments':
-        return wrapWithLink(
-          <Card className="stat-card border-0 bg-warning/5 h-full cursor-pointer">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-warning" />
-                {t.dashboard.pendingPayments}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
-              <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {t.dashboard.invoicesPending}</p>
-            </CardContent>
-          </Card>,
-          card.id
+      case 'financial-summary':
+        return (
+          <FinancialSummaryCard
+            totalIncome={totalIncome}
+            totalExpenses={totalExpenses}
+            receivable={pendingAmount}
+            language={language}
+          />
         );
       case 'service-requests':
         return wrapWithLink(
@@ -501,38 +492,6 @@ const Dashboard = () => {
             <CardContent>
               <p className="text-3xl font-bold text-destructive">{openRequests}</p>
               <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'চলমান অনুরোধ' : 'Open requests'}</p>
-            </CardContent>
-          </Card>,
-          card.id
-        );
-      case 'total-income':
-        return wrapWithLink(
-          <Card className="stat-card border-0 bg-success/5 h-full cursor-pointer">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-success" />
-                {t.dashboard.totalIncome}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-success">{formatBDT(totalIncome)}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t.dashboard.fromPaidInvoices}</p>
-            </CardContent>
-          </Card>,
-          card.id
-        );
-      case 'total-expenses':
-        return wrapWithLink(
-          <Card className="stat-card border-0 bg-destructive/5 h-full cursor-pointer">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-destructive" />
-                {t.dashboard.totalExpenses}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t.dashboard.allExpensesCombined}</p>
             </CardContent>
           </Card>,
           card.id
@@ -573,14 +532,14 @@ const Dashboard = () => {
       <div className="p-6 space-y-6 animate-fade-in">
         {/* Stats Grid - Draggable */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}
           </div>
         ) : (
           <DraggableDashboardGrid
             items={adminDraggableItems}
             onReorder={adminCards.reorderCards}
-            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
           />
         )}
 
