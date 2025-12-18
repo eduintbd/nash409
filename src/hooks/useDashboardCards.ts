@@ -45,10 +45,19 @@ export function useDashboardCards(role: 'admin' | 'owner' | 'tenant') {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        // Merge with defaults to ensure new cards are included
-        const existingIds = parsed.map((c: DashboardCard) => c.id);
+        // Merge with defaults to ensure new cards get new properties like links
+        const mergedCards = parsed.map((storedCard: DashboardCard) => {
+          const defaultCard = defaultCards.find(d => d.id === storedCard.id);
+          if (defaultCard) {
+            // Merge default properties (like link) with stored card, preserving user customizations
+            return { ...defaultCard, ...storedCard, link: defaultCard.link };
+          }
+          return storedCard;
+        });
+        // Add any new default cards that don't exist in storage
+        const existingIds = mergedCards.map((c: DashboardCard) => c.id);
         const newDefaults = defaultCards.filter(d => !existingIds.includes(d.id));
-        return [...parsed, ...newDefaults].sort((a, b) => a.order - b.order);
+        return [...mergedCards, ...newDefaults].sort((a, b) => a.order - b.order);
       } catch {
         return defaultCards;
       }
