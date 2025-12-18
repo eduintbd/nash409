@@ -108,121 +108,242 @@ serve(async (req) => {
           phone: t.phone,
         })),
       };
-    } else if (userRole === 'owner' && ownerId) {
-      // Fetch owner-specific data
-      const [ownerFlatsRes, invoicesRes, serviceRequestsRes, tenantsRes] = await Promise.all([
-        supabase.from('owner_flats').select('flat_id, flats(*)').eq('owner_id', ownerId),
-        supabase.from('invoices').select('*, flats(flat_number)').in('flat_id', flatIds || []),
-        supabase.from('service_requests').select('*, flats(flat_number)').in('flat_id', flatIds || []),
-        supabase.from('tenants').select('*, flats(flat_number)').in('flat_id', flatIds || []),
-      ]);
+    } else if (userRole === 'owner') {
+      // Fetch owner-specific data - handle case where ownerId might be missing
+      if (!ownerId) {
+        contextData = {
+          ...contextData,
+          dataStatus: {
+            hasProperties: false,
+            hasTenants: false,
+            hasInvoices: false,
+            message: "No owner profile found. You may need to contact the admin to link your account to your properties."
+          },
+          properties: [],
+          financials: { totalReceived: 0, totalPending: 0, pendingInvoices: [] },
+          tenants: [],
+          serviceRequests: [],
+        };
+      } else {
+        const [ownerFlatsRes, ownerInfoRes] = await Promise.all([
+          supabase.from('owner_flats').select('flat_id, flats(*)').eq('owner_id', ownerId),
+          supabase.from('owners').select('*').eq('id', ownerId).single(),
+        ]);
 
-      const ownerFlats = ownerFlatsRes.data || [];
-      const invoices = invoicesRes.data || [];
-      const serviceRequests = serviceRequestsRes.data || [];
-      const tenants = tenantsRes.data || [];
+        const ownerFlats = ownerFlatsRes.data || [];
+        const ownerInfo = ownerInfoRes.data;
+        const ownerFlatIds = ownerFlats.map((of: any) => of.flat_id);
 
-      const receivedAmount = invoices.filter((i: any) => i.status === 'paid').reduce((sum: number, i: any) => sum + Number(i.amount), 0);
-      const pendingAmount = invoices.filter((i: any) => i.status === 'unpaid' || i.status === 'overdue').reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+        // Only fetch if there are flats
+        let invoices: any[] = [];
+        let serviceRequests: any[] = [];
+        let tenants: any[] = [];
 
-      contextData = {
-        ...contextData,
-        properties: ownerFlats.map((of: any) => ({
-          flatNumber: (of.flats as any)?.flat_number,
-          floor: (of.flats as any)?.floor,
-          size: (of.flats as any)?.size,
-          status: (of.flats as any)?.status,
-        })),
-        financials: {
-          totalReceived: receivedAmount,
-          totalPending: pendingAmount,
-          pendingInvoices: invoices.filter(i => i.status === 'unpaid' || i.status === 'overdue').map(i => ({
-            flatNumber: i.flats?.flat_number,
-            amount: i.amount,
-            month: i.month,
-            year: i.year,
-            dueDate: i.due_date,
-            status: i.status,
+        if (ownerFlatIds.length > 0) {
+          const [invoicesRes, serviceRequestsRes, tenantsRes] = await Promise.all([
+            supabase.from('invoices').select('*, flats(flat_number)').in('flat_id', ownerFlatIds),
+            supabase.from('service_requests').select('*, flats(flat_number)').in('flat_id', ownerFlatIds),
+            supabase.from('tenants').select('*, flats(flat_number)').in('flat_id', ownerFlatIds),
+          ]);
+          invoices = invoicesRes.data || [];
+          serviceRequests = serviceRequestsRes.data || [];
+          tenants = tenantsRes.data || [];
+        }
+
+        const receivedAmount = invoices.filter((i: any) => i.status === 'paid').reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+        const pendingInvoices = invoices.filter((i: any) => i.status === 'unpaid' || i.status === 'overdue');
+        const pendingAmount = pendingInvoices.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+
+        // Build intelligent data status
+        const dataStatus = {
+          hasProperties: ownerFlats.length > 0,
+          propertyCount: ownerFlats.length,
+          hasTenants: tenants.length > 0,
+          tenantCount: tenants.length,
+          hasInvoices: invoices.length > 0,
+          hasPendingPayments: pendingInvoices.length > 0,
+          hasOpenServiceRequests: serviceRequests.filter((r: any) => r.status === 'open' || r.status === 'in-progress').length > 0,
+        };
+
+        contextData = {
+          ...contextData,
+          ownerInfo: ownerInfo ? {
+            name: ownerInfo.name,
+            phone: ownerInfo.phone,
+            email: ownerInfo.email,
+            ownershipStart: ownerInfo.ownership_start,
+          } : null,
+          dataStatus,
+          properties: ownerFlats.map((of: any) => ({
+            flatNumber: (of.flats as any)?.flat_number,
+            floor: (of.flats as any)?.floor,
+            size: (of.flats as any)?.size,
+            status: (of.flats as any)?.status,
+            hasTenant: tenants.some((t: any) => t.flat_id === of.flat_id),
           })),
-        },
-        tenants: tenants.map(t => ({
-          name: t.name,
-          flatNumber: t.flats?.flat_number,
-          rentAmount: t.rent_amount,
-          startDate: t.start_date,
-          phone: t.phone,
-          agreementStatus: t.agreement_status,
-        })),
-        serviceRequests: serviceRequests.filter(r => r.status !== 'closed').map(r => ({
-          title: r.title,
-          flatNumber: r.flats?.flat_number,
-          priority: r.priority,
-          status: r.status,
-        })),
-      };
-    } else if (userRole === 'tenant' && flatIds?.length > 0) {
-      // Fetch tenant-specific data
-      const [invoicesRes, serviceRequestsRes, tenantRes] = await Promise.all([
-        supabase.from('invoices').select('*, flats(flat_number)').in('flat_id', flatIds),
-        supabase.from('service_requests').select('*, flats(flat_number)').in('flat_id', flatIds),
-        supabase.from('tenants').select('*').eq('user_id', userId).single(),
-      ]);
-
-      const invoices = invoicesRes.data || [];
-      const serviceRequests = serviceRequestsRes.data || [];
+          financials: {
+            totalReceived: receivedAmount,
+            totalPending: pendingAmount,
+            pendingInvoices: pendingInvoices.map((i: any) => ({
+              flatNumber: i.flats?.flat_number,
+              amount: i.amount,
+              month: i.month,
+              year: i.year,
+              dueDate: i.due_date,
+              status: i.status,
+            })),
+          },
+          tenants: tenants.map((t: any) => ({
+            name: t.name,
+            flatNumber: t.flats?.flat_number,
+            rentAmount: t.rent_amount,
+            startDate: t.start_date,
+            endDate: t.end_date,
+            phone: t.phone,
+            email: t.email,
+            agreementStatus: t.agreement_status,
+          })),
+          serviceRequests: serviceRequests.map((r: any) => ({
+            title: r.title,
+            flatNumber: r.flats?.flat_number,
+            priority: r.priority,
+            status: r.status,
+            category: r.category,
+            createdAt: r.created_at,
+          })),
+        };
+      }
+    } else if (userRole === 'tenant') {
+      // Fetch tenant-specific data - handle case where tenant might not have flatIds
+      const tenantRes = await supabase.from('tenants').select('*, flats(*)').eq('user_id', userId).single();
       const tenant = tenantRes.data;
 
-      const paidAmount = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.amount), 0);
-      const pendingInvoices = invoices.filter(i => i.status === 'unpaid' || i.status === 'overdue');
-      const pendingAmount = pendingInvoices.reduce((sum, i) => sum + Number(i.amount), 0);
+      if (!tenant || !tenant.flat_id) {
+        contextData = {
+          ...contextData,
+          dataStatus: {
+            hasTenantProfile: !!tenant,
+            hasFlat: false,
+            message: tenant 
+              ? "Your tenant profile exists but is not linked to any flat yet. Please contact your landlord or admin."
+              : "No tenant profile found. You may need to contact the admin to set up your account."
+          },
+          tenant: tenant ? {
+            name: tenant.name,
+            phone: tenant.phone,
+            email: tenant.email,
+          } : null,
+          financials: { totalPaid: 0, totalPending: 0, pendingInvoices: [] },
+          serviceRequests: [],
+        };
+      } else {
+        const [invoicesRes, serviceRequestsRes] = await Promise.all([
+          supabase.from('invoices').select('*, flats(flat_number)').eq('flat_id', tenant.flat_id),
+          supabase.from('service_requests').select('*, flats(flat_number)').eq('flat_id', tenant.flat_id),
+        ]);
 
-      contextData = {
-        ...contextData,
-        tenant: tenant ? {
-          name: tenant.name,
-          rentAmount: tenant.rent_amount,
-          securityDeposit: tenant.security_deposit,
-          startDate: tenant.start_date,
-          endDate: tenant.end_date,
-        } : null,
-        financials: {
-          totalPaid: paidAmount,
-          totalPending: pendingAmount,
-          pendingInvoices: pendingInvoices.map(i => ({
-            type: i.invoice_type,
-            amount: i.amount,
-            month: i.month,
-            year: i.year,
-            dueDate: i.due_date,
-            status: i.status,
+        const invoices = invoicesRes.data || [];
+        const serviceRequests = serviceRequestsRes.data || [];
+
+        const paidAmount = invoices.filter((i: any) => i.status === 'paid').reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+        const pendingInvoices = invoices.filter((i: any) => i.status === 'unpaid' || i.status === 'overdue');
+        const pendingAmount = pendingInvoices.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+        const overdueInvoices = pendingInvoices.filter((i: any) => i.status === 'overdue');
+
+        // Find next due date
+        const upcomingInvoices = pendingInvoices.sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+        const nextDue = upcomingInvoices.length > 0 ? upcomingInvoices[0] : null;
+
+        const dataStatus = {
+          hasTenantProfile: true,
+          hasFlat: true,
+          flatNumber: (tenant.flats as any)?.flat_number,
+          hasInvoices: invoices.length > 0,
+          hasPendingDues: pendingInvoices.length > 0,
+          hasOverdueDues: overdueInvoices.length > 0,
+          overdueCount: overdueInvoices.length,
+          hasServiceRequests: serviceRequests.length > 0,
+          openServiceRequests: serviceRequests.filter((r: any) => r.status === 'open' || r.status === 'in-progress').length,
+        };
+
+        contextData = {
+          ...contextData,
+          dataStatus,
+          tenant: {
+            name: tenant.name,
+            phone: tenant.phone,
+            email: tenant.email,
+            flatNumber: (tenant.flats as any)?.flat_number,
+            floor: (tenant.flats as any)?.floor,
+            rentAmount: tenant.rent_amount,
+            securityDeposit: tenant.security_deposit,
+            startDate: tenant.start_date,
+            endDate: tenant.end_date,
+            agreementStatus: tenant.agreement_status,
+          },
+          financials: {
+            totalPaid: paidAmount,
+            totalPending: pendingAmount,
+            overdueAmount: overdueInvoices.reduce((sum: number, i: any) => sum + Number(i.amount), 0),
+            nextDueDate: nextDue?.due_date,
+            nextDueAmount: nextDue?.amount,
+            pendingInvoices: pendingInvoices.map((i: any) => ({
+              type: i.invoice_type,
+              amount: i.amount,
+              month: i.month,
+              year: i.year,
+              dueDate: i.due_date,
+              status: i.status,
+              description: i.description,
+            })),
+            paidInvoices: invoices.filter((i: any) => i.status === 'paid').slice(0, 5).map((i: any) => ({
+              type: i.invoice_type,
+              amount: i.amount,
+              month: i.month,
+              year: i.year,
+              paidDate: i.paid_date,
+            })),
+          },
+          serviceRequests: serviceRequests.map((r: any) => ({
+            ticketNumber: r.ticket_number,
+            title: r.title,
+            status: r.status,
+            priority: r.priority,
+            category: r.category,
+            createdAt: r.created_at,
+            resolvedAt: r.resolved_at,
           })),
-        },
-        serviceRequests: serviceRequests.map(r => ({
-          title: r.title,
-          status: r.status,
-          priority: r.priority,
-          createdAt: r.created_at,
-        })),
-      };
+        };
+      }
     }
 
-    // Build system prompt with context
-    const systemPrompt = `You are a helpful Building Management Assistant for a property management system in Bangladesh. 
-You have access to the user's portal data and should provide precise, accurate answers.
+    // Build intelligent system prompt
+    const systemPrompt = `You are a smart, friendly Building Management Assistant for a property management system in Bangladesh.
+You have FULL ACCESS to the user's portal data and must provide intelligent, personalized responses.
 
-IMPORTANT RULES:
-- Always use BDT (৳) as the currency symbol
-- Current date and time: ${currentDate.toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}
-- Be precise with numbers and amounts
-- Format currency as ৳X,XXX
-- Keep responses concise but informative
-- If data is not available, say so clearly
-- User role: ${userRole}
+CRITICAL RULES:
+1. Always use BDT (৳) as the currency symbol, format as ৳X,XXX
+2. Current date and time in Bangladesh: ${currentDate.toLocaleString('en-BD', { timeZone: 'Asia/Dhaka', dateStyle: 'full', timeStyle: 'short' })}
+3. Be SMART - analyze the data intelligently:
+   - If arrays are empty, tell them clearly (e.g., "You have no properties listed right now")
+   - If data is missing, explain what they need to do
+   - Proactively highlight important things (overdue payments, open requests)
+4. Be PRECISE with numbers - use exact figures from the data
+5. Be HELPFUL - suggest actions they can take
+6. User role: ${userRole}
 
-USER'S PORTAL DATA:
+INTELLIGENCE GUIDELINES:
+- Check "dataStatus" to understand what data exists
+- If hasProperties is false for owner: "You don't have any properties registered in the system yet."
+- If hasPendingDues is true for tenant: Highlight the amount and due date
+- If hasOverdueDues is true: URGENT - mention this prominently
+- Provide context: "Your rent is ৳X per month" or "You own X properties"
+- For empty data, don't say "I don't have data" - say "You don't have any X yet"
+
+USER'S COMPLETE PORTAL DATA:
 ${JSON.stringify(contextData, null, 2)}
 
-Based on this data, answer the user's questions accurately. If they ask about dues, payments, or financial information, use the exact figures from the data above.`;
+Answer questions accurately using the data above. Be conversational, helpful, and smart about interpreting the data.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
