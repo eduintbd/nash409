@@ -93,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email using Resend
     const emailResponse = await resend.emails.send({
-      from: "CommunityHub <support@eduintbd.com>",
+      from: "NASH-MS <support@eduintbd.cloud>",
       to: [email],
       subject: "Reset Your Password - CommunityHub",
       html: `

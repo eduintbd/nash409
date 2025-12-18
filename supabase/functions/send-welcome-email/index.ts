@@ -34,7 +34,7 @@ const handler = async (req: Request): Promise<Response> => {
     const userName = name || "User";
 
     const emailResponse = await resend.emails.send({
-      from: "NASH-MS <support@eduintbd.com>",
+      from: "NASH-MS <support@eduintbd.cloud>",
       to: [email],
       subject: "Welcome to NASH‑MS – Your Building, One Smart Dashboard",
       html: `
