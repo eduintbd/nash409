@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Receipt, Wallet } from 'lucide-react';
 import { formatBDT } from '@/lib/currency';
+import { Link } from 'react-router-dom';
 
 interface FinancialSummaryCardProps {
   totalIncome: number;
@@ -27,51 +28,59 @@ export function FinancialSummaryCard({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Income */}
-          <div className="p-4 rounded-xl bg-success/10 border border-success/20">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-4 w-4 text-success" />
-              <span className="text-sm text-muted-foreground">
-                {language === 'bn' ? 'আয়' : 'Income'}
-              </span>
+          {/* Income - Links to paid invoices */}
+          <Link to="/invoices?status=paid" className="block hover:scale-[1.02] transition-transform">
+            <div className="p-4 rounded-xl bg-success/10 border border-success/20 h-full cursor-pointer">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-4 w-4 text-success" />
+                <span className="text-sm text-muted-foreground">
+                  {language === 'bn' ? 'আয়' : 'Income'}
+                </span>
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-success">{formatBDT(totalIncome)}</p>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-success">{formatBDT(totalIncome)}</p>
-          </div>
+          </Link>
 
-          {/* Expenses */}
-          <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingDown className="h-4 w-4 text-destructive" />
-              <span className="text-sm text-muted-foreground">
-                {language === 'bn' ? 'খরচ' : 'Expenses'}
-              </span>
+          {/* Expenses - Links to expenses page */}
+          <Link to="/expenses" className="block hover:scale-[1.02] transition-transform">
+            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 h-full cursor-pointer">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingDown className="h-4 w-4 text-destructive" />
+                <span className="text-sm text-muted-foreground">
+                  {language === 'bn' ? 'খরচ' : 'Expenses'}
+                </span>
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
-          </div>
+          </Link>
 
-          {/* Receivable */}
-          <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Receipt className="h-4 w-4 text-warning" />
-              <span className="text-sm text-muted-foreground">
-                {language === 'bn' ? 'বকেয়া পাওনা' : 'Receivable'}
-              </span>
+          {/* Receivable - Links to unpaid invoices */}
+          <Link to="/invoices?status=unpaid" className="block hover:scale-[1.02] transition-transform">
+            <div className="p-4 rounded-xl bg-warning/10 border border-warning/20 h-full cursor-pointer">
+              <div className="flex items-center gap-2 mb-2">
+                <Receipt className="h-4 w-4 text-warning" />
+                <span className="text-sm text-muted-foreground">
+                  {language === 'bn' ? 'বকেয়া পাওনা' : 'Receivable'}
+                </span>
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-warning">{formatBDT(receivable)}</p>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-warning">{formatBDT(receivable)}</p>
-          </div>
+          </Link>
 
-          {/* Net Balance */}
-          <div className={`p-4 rounded-xl ${netBalance >= 0 ? 'bg-primary/10 border-primary/20' : 'bg-orange-500/10 border-orange-500/20'} border`}>
-            <div className="flex items-center gap-2 mb-2">
-              <Wallet className="h-4 w-4 text-primary" />
-              <span className="text-sm text-muted-foreground">
-                {language === 'bn' ? 'নিট ব্যালেন্স' : 'Net Balance'}
-              </span>
+          {/* Net Balance - Links to invoices */}
+          <Link to="/invoices" className="block hover:scale-[1.02] transition-transform">
+            <div className={`p-4 rounded-xl ${netBalance >= 0 ? 'bg-primary/10 border-primary/20' : 'bg-orange-500/10 border-orange-500/20'} border h-full cursor-pointer`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="h-4 w-4 text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  {language === 'bn' ? 'নিট ব্যালেন্স' : 'Net Balance'}
+                </span>
+              </div>
+              <p className={`text-xl md:text-2xl font-bold ${netBalance >= 0 ? 'text-primary' : 'text-orange-600'}`}>
+                {formatBDT(netBalance)}
+              </p>
             </div>
-            <p className={`text-xl md:text-2xl font-bold ${netBalance >= 0 ? 'text-primary' : 'text-orange-600'}`}>
-              {formatBDT(netBalance)}
-            </p>
-          </div>
+          </Link>
         </div>
       </CardContent>
     </Card>

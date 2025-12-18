@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Receipt, Wallet } from 'lucide-react';
 import { formatBDT } from '@/lib/currency';
+import { Link } from 'react-router-dom';
 
 interface TenantFinancialCardProps {
   totalPaid: number;
@@ -27,51 +28,59 @@ export function TenantFinancialCard({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Total Paid */}
-          <div className="p-4 rounded-xl bg-success/10 border border-success/20">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-4 w-4 text-success" />
-              <span className="text-sm text-muted-foreground">
-                {language === 'bn' ? 'পরিশোধিত' : 'Paid'}
-              </span>
+          {/* Total Paid - Links to paid invoices */}
+          <Link to="/invoices?status=paid" className="block hover:scale-[1.02] transition-transform">
+            <div className="p-4 rounded-xl bg-success/10 border border-success/20 h-full cursor-pointer">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-4 w-4 text-success" />
+                <span className="text-sm text-muted-foreground">
+                  {language === 'bn' ? 'পরিশোধিত' : 'Paid'}
+                </span>
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-success">{formatBDT(totalPaid)}</p>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-success">{formatBDT(totalPaid)}</p>
-          </div>
+          </Link>
 
-          {/* Payable */}
-          <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Receipt className="h-4 w-4 text-warning" />
-              <span className="text-sm text-muted-foreground">
-                {language === 'bn' ? 'পরিশোধযোগ্য' : 'Payable'}
-              </span>
+          {/* Payable - Links to unpaid invoices */}
+          <Link to="/invoices?status=unpaid" className="block hover:scale-[1.02] transition-transform">
+            <div className="p-4 rounded-xl bg-warning/10 border border-warning/20 h-full cursor-pointer">
+              <div className="flex items-center gap-2 mb-2">
+                <Receipt className="h-4 w-4 text-warning" />
+                <span className="text-sm text-muted-foreground">
+                  {language === 'bn' ? 'পরিশোধযোগ্য' : 'Payable'}
+                </span>
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-warning">{formatBDT(totalPayable)}</p>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-warning">{formatBDT(totalPayable)}</p>
-          </div>
+          </Link>
 
-          {/* Pending Bills */}
-          <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingDown className="h-4 w-4 text-destructive" />
-              <span className="text-sm text-muted-foreground">
-                {language === 'bn' ? 'বকেয়া বিল' : 'Pending Bills'}
-              </span>
+          {/* Pending Bills - Links to unpaid invoices */}
+          <Link to="/invoices?status=unpaid" className="block hover:scale-[1.02] transition-transform">
+            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 h-full cursor-pointer">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingDown className="h-4 w-4 text-destructive" />
+                <span className="text-sm text-muted-foreground">
+                  {language === 'bn' ? 'বকেয়া বিল' : 'Pending Bills'}
+                </span>
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-destructive">{pendingBills}</p>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-destructive">{pendingBills}</p>
-          </div>
+          </Link>
 
-          {/* Total Due */}
-          <div className={`p-4 rounded-xl ${totalDue === 0 ? 'bg-primary/10 border-primary/20' : 'bg-orange-500/10 border-orange-500/20'} border`}>
-            <div className="flex items-center gap-2 mb-2">
-              <Wallet className="h-4 w-4 text-primary" />
-              <span className="text-sm text-muted-foreground">
-                {language === 'bn' ? 'মোট বকেয়া' : 'Total Due'}
-              </span>
+          {/* Total Due - Links to invoices */}
+          <Link to="/invoices" className="block hover:scale-[1.02] transition-transform">
+            <div className={`p-4 rounded-xl ${totalDue === 0 ? 'bg-primary/10 border-primary/20' : 'bg-orange-500/10 border-orange-500/20'} border h-full cursor-pointer`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="h-4 w-4 text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  {language === 'bn' ? 'মোট বকেয়া' : 'Total Due'}
+                </span>
+              </div>
+              <p className={`text-xl md:text-2xl font-bold ${totalDue === 0 ? 'text-primary' : 'text-orange-600'}`}>
+                {formatBDT(totalDue)}
+              </p>
             </div>
-            <p className={`text-xl md:text-2xl font-bold ${totalDue === 0 ? 'text-primary' : 'text-orange-600'}`}>
-              {formatBDT(totalDue)}
-            </p>
-          </div>
+          </Link>
         </div>
       </CardContent>
     </Card>
