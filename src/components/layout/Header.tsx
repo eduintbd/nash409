@@ -41,36 +41,43 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
-      <div className="flex items-center gap-3 pl-12 lg:pl-0 min-w-0 flex-1">
+    <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 lg:px-6">
+      {/* Left section - Title */}
+      <div className="flex items-center gap-2 lg:gap-3 pl-10 lg:pl-0 min-w-0 flex-1 max-w-[50%] lg:max-w-none">
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg lg:text-xl font-semibold text-foreground truncate">{title}</h1>
+          <h1 className="text-sm sm:text-base lg:text-xl font-semibold text-foreground truncate">{title}</h1>
           {subtitle && (
-            <p className="text-xs lg:text-sm text-muted-foreground line-clamp-1">{subtitle}</p>
+            <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground truncate hidden sm:block">{subtitle}</p>
           )}
         </div>
-        {actions && <div className="flex-shrink-0">{actions}</div>}
+        {actions && <div className="flex-shrink-0 hidden lg:block">{actions}</div>}
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="hidden md:flex relative">
+      {/* Right section - Controls */}
+      <div className="flex items-center gap-1 sm:gap-2 lg:gap-3">
+        {/* Search - hidden on mobile */}
+        <div className="hidden lg:flex relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={`${t.common.search}...`}
-            className="w-64 pl-9 bg-muted/50 border-0 focus-visible:ring-1"
+            className="w-48 xl:w-64 pl-9 bg-muted/50 border-0 focus-visible:ring-1"
           />
         </div>
-        <LanguageSwitcher />
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive" />
-        </Button>
         
+        {/* Language Switcher */}
+        <LanguageSwitcher />
+        
+        {/* Notifications */}
+        <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-9 lg:w-9">
+          <Bell className="h-4 w-4 lg:h-5 lg:w-5" />
+          <span className="absolute top-1 right-1 lg:top-2 lg:right-2 h-2 w-2 rounded-full bg-destructive" />
+        </Button>
+        {/* User Menu */}
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <User className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-9 lg:w-9">
+                <User className="h-4 w-4 lg:h-5 lg:w-5" />
                 {isAdmin && (
                   <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary flex items-center justify-center">
                     <Shield className="h-2 w-2 text-primary-foreground" />
@@ -104,7 +111,7 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
+          <Button variant="outline" size="sm" className="h-8 text-xs lg:text-sm" onClick={() => navigate('/auth')}>
             {language === 'bn' ? 'লগইন' : 'Login'}
           </Button>
         )}
