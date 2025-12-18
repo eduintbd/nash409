@@ -401,6 +401,42 @@ export type Database = {
         }
         Relationships: []
       }
+      property_documents: {
+        Row: {
+          building_name: string
+          created_at: string
+          document_name: string
+          document_type: string
+          file_path: string
+          file_size: number | null
+          id: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          building_name: string
+          created_at?: string
+          document_name: string
+          document_type?: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          building_name?: string
+          created_at?: string
+          document_name?: string
+          document_type?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       service_requests: {
         Row: {
           assigned_to: string | null
@@ -588,6 +624,59 @@ export type Database = {
             columns: ["approved_by_owner_id"]
             isOneToOne: false
             referencedRelation: "owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      utility_bills: {
+        Row: {
+          amount: number
+          bill_month: string
+          bill_type: string
+          bill_year: number
+          created_at: string
+          file_path: string
+          file_size: number | null
+          flat_id: string | null
+          id: string
+          paid_by: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          amount?: number
+          bill_month: string
+          bill_type?: string
+          bill_year: number
+          created_at?: string
+          file_path: string
+          file_size?: number | null
+          flat_id?: string | null
+          id?: string
+          paid_by?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          amount?: number
+          bill_month?: string
+          bill_type?: string
+          bill_year?: number
+          created_at?: string
+          file_path?: string
+          file_size?: number | null
+          flat_id?: string | null
+          id?: string
+          paid_by?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "utility_bills_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
             referencedColumns: ["id"]
           },
         ]
