@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useFlats } from '@/hooks/useFlats';
-import { Building2, Loader2, Mail } from 'lucide-react';
+import { Building2, Loader2, Mail, KeyRound } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Invalid email address');
@@ -36,6 +36,7 @@ const Auth = () => {
   const { user, signIn, isLoading } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: flats } = useFlats();
   
   const [loginEmail, setLoginEmail] = useState('');
@@ -50,6 +51,12 @@ const Auth = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+  
+  // Password reset with token
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // Get available flats for owner/tenant selection
   // Owners can select any flat (including rented ones they own)
@@ -57,11 +64,19 @@ const Auth = () => {
   // Tenants can select any flat number during signup (final assignment still depends on approvals/workflow)
   const availableFlatsForTenant = flats || [];
 
+  // Check for reset token in URL
   useEffect(() => {
-    if (user) {
+    const token = searchParams.get('token');
+    if (token) {
+      setResetToken(token);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (user && !resetToken) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, navigate, resetToken]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,18 +127,17 @@ const Auth = () => {
     }
 
     setIsResetting(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/auth?reset=true`,
-    });
-    setIsResetting(false);
-
-    if (error) {
-      toast({ 
-        title: language === 'bn' ? 'ত্রুটি' : 'Error', 
-        description: error.message, 
-        variant: 'destructive' 
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: {
+          email: resetEmail,
+          redirectUrl: `${window.location.origin}/auth`,
+        }
       });
-    } else {
+
+      if (error) throw error;
+
       toast({ 
         title: language === 'bn' ? 'ইমেইল পাঠানো হয়েছে' : 'Email Sent',
         description: language === 'bn' 
@@ -132,6 +146,74 @@ const Auth = () => {
       });
       setShowForgotPassword(false);
       setResetEmail('');
+    } catch (error: any) {
+      toast({ 
+        title: language === 'bn' ? 'ত্রুটি' : 'Error', 
+        description: error.message || 'Failed to send reset email', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      toast({ 
+        title: language === 'bn' ? 'ত্রুটি' : 'Error', 
+        description: language === 'bn' ? 'পাসওয়ার্ড মিলছে না' : 'Passwords do not match', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    try {
+      passwordSchema.parse(newPassword);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast({ 
+          title: language === 'bn' ? 'ত্রুটি' : 'Error', 
+          description: err.errors[0].message, 
+          variant: 'destructive' 
+        });
+        return;
+      }
+    }
+
+    setIsUpdatingPassword(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-reset-token', {
+        body: {
+          token: resetToken,
+          newPassword: newPassword,
+        }
+      });
+
+      if (error) throw error;
+
+      toast({ 
+        title: language === 'bn' ? 'সফল!' : 'Success!',
+        description: language === 'bn' 
+          ? 'পাসওয়ার্ড সফলভাবে আপডেট হয়েছে' 
+          : 'Password updated successfully',
+      });
+      
+      // Clear token and redirect to login
+      setResetToken(null);
+      setNewPassword('');
+      setConfirmPassword('');
+      navigate('/auth', { replace: true });
+    } catch (error: any) {
+      toast({ 
+        title: language === 'bn' ? 'ত্রুটি' : 'Error', 
+        description: error.message || 'Failed to update password', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -208,6 +290,68 @@ const Auth = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show password reset form if token is present
+  if (resetToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <KeyRound className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">
+              {language === 'bn' ? 'নতুন পাসওয়ার্ড সেট করুন' : 'Set New Password'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'bn' ? 'আপনার নতুন পাসওয়ার্ড দিন' : 'Enter your new password'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">{language === 'bn' ? 'নতুন পাসওয়ার্ড' : 'New Password'}</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={language === 'bn' ? 'কমপক্ষে ৬ অক্ষর' : 'At least 6 characters'}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">{language === 'bn' ? 'পাসওয়ার্ড নিশ্চিত করুন' : 'Confirm Password'}</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isUpdatingPassword}>
+                {isUpdatingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {language === 'bn' ? 'পাসওয়ার্ড আপডেট করুন' : 'Update Password'}
+              </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetToken(null);
+                    navigate('/auth', { replace: true });
+                  }}
+                  className="text-sm text-muted-foreground hover:underline"
+                >
+                  {language === 'bn' ? 'লগইনে ফিরে যান' : 'Back to Login'}
+                </button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }

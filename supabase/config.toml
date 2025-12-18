@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.generate-monthly-rent]
 verify_jwt = false
+
+[functions.send-password-reset]
+verify_jwt = false
+
+[functions.verify-reset-token]
+verify_jwt = false
+
+[functions.admin-reset-password]
+verify_jwt = false
