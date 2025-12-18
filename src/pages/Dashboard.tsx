@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/Header';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CustomStatCard } from '@/components/dashboard/CustomStatCard';
 import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer';
+import { DraggableDashboardGrid } from '@/components/dashboard/DraggableDashboardGrid';
 import { useFlats } from '@/hooks/useFlats';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
@@ -10,12 +11,13 @@ import { useEmployees } from '@/hooks/useEmployees';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDashboardCards } from '@/hooks/useDashboardCards';
+import { useDashboardCards, DashboardCard } from '@/hooks/useDashboardCards';
 import { Building2, Users, Receipt, Wrench, TrendingUp, TrendingDown, Home, Wallet } from 'lucide-react';
 import { formatBDT } from '@/lib/currency';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { OwnerPaymentChart } from '@/components/dashboard/OwnerPaymentChart';
+import { ReactNode } from 'react';
 
 const Dashboard = () => {
   const { t, language } = useLanguage();
@@ -423,8 +425,76 @@ const Dashboard = () => {
   }
 
   // Admin/Staff Dashboard
-  const isAdminCardVisible = (cardId: string) => adminCards.visibleCards.some(c => c.id === cardId);
-  const adminCustomCards = adminCards.visibleCards.filter(c => c.type === 'custom');
+  // Build admin card content map
+  const getAdminCardContent = (card: DashboardCard): ReactNode => {
+    switch (card.id) {
+      case 'total-flats':
+        return <StatCard title={t.dashboard.totalFlats} value={flats?.length || 0} icon={Building2} variant="primary" />;
+      case 'occupied':
+        return <StatCard title={t.dashboard.occupied} value={occupiedFlats} icon={Users} variant="success" />;
+      case 'pending-payments':
+        return <StatCard title={t.dashboard.pendingPayments} value={pendingPayments} icon={Receipt} variant="warning" />;
+      case 'service-requests':
+        return <StatCard title={t.dashboard.serviceRequests} value={openRequests} icon={Wrench} variant="destructive" />;
+      case 'total-income':
+        return (
+          <Card className="stat-card border-0 bg-success/5 h-full">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-success" />
+                {t.dashboard.totalIncome}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-success">{formatBDT(totalIncome)}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t.dashboard.fromPaidInvoices}</p>
+            </CardContent>
+          </Card>
+        );
+      case 'total-expenses':
+        return (
+          <Card className="stat-card border-0 bg-destructive/5 h-full">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 text-destructive" />
+                {t.dashboard.totalExpenses}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t.dashboard.allExpensesCombined}</p>
+            </CardContent>
+          </Card>
+        );
+      case 'pending-amount':
+        return (
+          <Card className="stat-card border-0 bg-warning/5 h-full">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-warning" />
+                {t.dashboard.pendingAmount}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
+              <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {t.dashboard.invoicesPending}</p>
+            </CardContent>
+          </Card>
+        );
+      default:
+        if (card.type === 'custom') {
+          return <CustomStatCard card={card} />;
+        }
+        return null;
+    }
+  };
+
+  const adminDraggableItems = adminCards.visibleCards
+    .map(card => ({
+      id: card.id,
+      content: getAdminCardContent(card),
+    }))
+    .filter(item => item.content !== null);
   
   return (
     <MainLayout>
@@ -445,99 +515,19 @@ const Dashboard = () => {
       />
       
       <div className="p-6 space-y-6 animate-fade-in">
-        {/* Stats Grid */}
+        {/* Stats Grid - Draggable */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            {isAdminCardVisible('total-flats') && (
-              <StatCard
-                title={t.dashboard.totalFlats}
-                value={flats?.length || 0}
-                icon={Building2}
-                variant="primary"
-              />
-            )}
-            {isAdminCardVisible('occupied') && (
-              <StatCard
-                title={t.dashboard.occupied}
-                value={occupiedFlats}
-                icon={Users}
-                variant="success"
-              />
-            )}
-            {isAdminCardVisible('pending-payments') && (
-              <StatCard
-                title={t.dashboard.pendingPayments}
-                value={pendingPayments}
-                icon={Receipt}
-                variant="warning"
-              />
-            )}
-            {isAdminCardVisible('service-requests') && (
-              <StatCard
-                title={t.dashboard.serviceRequests}
-                value={openRequests}
-                icon={Wrench}
-                variant="destructive"
-              />
-            )}
-            {/* Custom Cards */}
-            {adminCustomCards.map((card) => (
-              <CustomStatCard key={card.id} card={card} />
-            ))}
-          </div>
+          <DraggableDashboardGrid
+            items={adminDraggableItems}
+            onReorder={adminCards.reorderCards}
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
+          />
         )}
 
-        {/* Financial Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {isAdminCardVisible('total-income') && (
-            <Card className="stat-card border-0 bg-success/5">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-success" />
-                  {t.dashboard.totalIncome}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-success">{formatBDT(totalIncome)}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t.dashboard.fromPaidInvoices}</p>
-              </CardContent>
-            </Card>
-          )}
-          
-          {isAdminCardVisible('total-expenses') && (
-            <Card className="stat-card border-0 bg-destructive/5">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-destructive" />
-                  {t.dashboard.totalExpenses}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t.dashboard.allExpensesCombined}</p>
-              </CardContent>
-            </Card>
-          )}
-          
-          {isAdminCardVisible('pending-amount') && (
-            <Card className="stat-card border-0 bg-warning/5">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Receipt className="h-4 w-4 text-warning" />
-                  {t.dashboard.pendingAmount}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
-                <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {t.dashboard.invoicesPending}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
