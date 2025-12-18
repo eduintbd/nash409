@@ -242,7 +242,7 @@ const TenantApprovals = () => {
 
   // Only owners (and admins) can access this page
   if (!isOwner && !isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (

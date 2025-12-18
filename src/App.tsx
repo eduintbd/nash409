@@ -22,6 +22,7 @@ import TenantApprovals from "./pages/TenantApprovals";
 import MyTenant from "./pages/MyTenant";
 import MyProperties from "./pages/MyProperties";
 import TenantAgreement from "./pages/TenantAgreement";
+import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,7 +36,8 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Landing />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/user-approvals" element={<UserApprovals />} />
