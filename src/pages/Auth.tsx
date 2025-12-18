@@ -291,16 +291,17 @@ const Auth = () => {
                         <SelectValue placeholder={language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Select flat'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {(signupRole === 'owner' ? availableFlatsForOwner : availableFlatsForTenant).map((flat) => (
-                          <SelectItem key={flat.id} value={flat.id}>
-                            {language === 'bn' ? `ফ্ল্যাট ${flat.flat_number}` : `Flat ${flat.flat_number}`} 
-                            {flat.status !== 'vacant' && ` (${flat.status})`}
-                          </SelectItem>
-                        ))}
-                        {(signupRole === 'owner' ? availableFlatsForOwner : availableFlatsForTenant).length === 0 && (
-                          <SelectItem value="" disabled>
+                        {(signupRole === 'owner' ? availableFlatsForOwner : availableFlatsForTenant).length === 0 ? (
+                          <div className="py-2 px-2 text-sm text-muted-foreground text-center">
                             {language === 'bn' ? 'কোন ফ্ল্যাট উপলব্ধ নেই' : 'No flats available'}
-                          </SelectItem>
+                          </div>
+                        ) : (
+                          (signupRole === 'owner' ? availableFlatsForOwner : availableFlatsForTenant).map((flat) => (
+                            <SelectItem key={flat.id} value={flat.id}>
+                              {language === 'bn' ? `ফ্ল্যাট ${flat.flat_number}` : `Flat ${flat.flat_number}`} 
+                              {flat.status !== 'vacant' && ` (${flat.status})`}
+                            </SelectItem>
+                          ))
                         )}
                       </SelectContent>
                     </Select>
