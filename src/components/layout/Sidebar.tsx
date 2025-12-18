@@ -51,6 +51,7 @@ export function Sidebar() {
     { name: t.nav.expenses, href: '/expenses', icon: Wallet },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
     { name: t.nav.cameras, href: '/cameras', icon: Camera },
+    { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
   ];
 
   // Minimal navigation for tenants
@@ -58,6 +59,7 @@ export function Sidebar() {
     { name: t.nav.dashboard, href: '/dashboard', icon: LayoutDashboard },
     { name: t.nav.invoices, href: '/invoices', icon: Receipt },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
+    { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
   ];
 
   const navigation = isAdmin || userRole === 'user' 
