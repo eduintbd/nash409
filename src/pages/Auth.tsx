@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useFlats } from '@/hooks/useFlats';
+
 import { Building2, Loader2, Mail, KeyRound } from 'lucide-react';
 import { z } from 'zod';
 
@@ -37,7 +37,7 @@ const Auth = () => {
   const { language } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { data: flats } = useFlats();
+  
   
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -46,7 +46,7 @@ const Auth = () => {
   const [signupName, setSignupName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [signupRole, setSignupRole] = useState<SignupRole | ''>('');
-  const [signupFlatId, setSignupFlatId] = useState('');
+  const [signupPropertyName, setSignupPropertyName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -58,11 +58,6 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-  // Get available flats for owner/tenant selection
-  // Owners can select any flat (including rented ones they own)
-  const availableFlatsForOwner = flats || [];
-  // Tenants can select any flat number during signup (final assignment still depends on approvals/workflow)
-  const availableFlatsForTenant = flats || [];
 
   // Check for reset token in URL
   useEffect(() => {
@@ -226,8 +221,8 @@ const Auth = () => {
       if (!signupName.trim()) throw new Error(language === 'bn' ? 'নাম প্রয়োজন' : 'Name is required');
       if (!signupRole) throw new Error(language === 'bn' ? 'ভূমিকা নির্বাচন করুন' : 'Please select a role');
       if (!signupPhone.trim()) throw new Error(language === 'bn' ? 'ফোন নম্বর প্রয়োজন' : 'Phone number is required');
-      if ((signupRole === 'owner' || signupRole === 'tenant') && !signupFlatId) {
-        throw new Error(language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Please select a flat');
+      if ((signupRole === 'owner' || signupRole === 'tenant') && !signupPropertyName.trim()) {
+        throw new Error(language === 'bn' ? 'প্রপার্টির নাম লিখুন' : 'Please enter property name');
       }
     } catch (err) {
       const message = err instanceof z.ZodError ? err.errors[0].message : (err as Error).message;
@@ -251,7 +246,7 @@ const Auth = () => {
           full_name: signupName,
           requested_role: signupRole,
           phone: signupPhone,
-          flat_id: signupFlatId || null
+          property_name: signupPropertyName || null
         }
       }
     });
@@ -283,7 +278,7 @@ const Auth = () => {
     setSignupName('');
     setSignupPhone('');
     setSignupRole('');
-    setSignupFlatId('');
+    setSignupPropertyName('');
   };
 
   if (isLoading) {
@@ -424,7 +419,7 @@ const Auth = () => {
                   <Label>{language === 'bn' ? 'আমি একজন' : 'I am a'}</Label>
                   <Select value={signupRole} onValueChange={(v) => {
                     setSignupRole(v as SignupRole);
-                    setSignupFlatId(''); // Reset flat selection when role changes
+                    setSignupPropertyName(''); // Reset property name when role changes
                   }}>
                     <SelectTrigger>
                       <SelectValue placeholder={language === 'bn' ? 'ভূমিকা নির্বাচন করুন' : 'Select role'} />
@@ -486,29 +481,18 @@ const Auth = () => {
                   />
                 </div>
 
-                {/* Flat Selection for Owner/Tenant */}
+                {/* Property Name for Owner/Tenant */}
                 {(signupRole === 'owner' || signupRole === 'tenant') && (
                   <div className="space-y-2">
-                    <Label>{language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Select Flat'}</Label>
-                    <Select value={signupFlatId} onValueChange={setSignupFlatId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={language === 'bn' ? 'ফ্ল্যাট নির্বাচন করুন' : 'Select flat'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(signupRole === 'owner' ? availableFlatsForOwner : availableFlatsForTenant).length === 0 ? (
-                          <div className="py-2 px-2 text-sm text-muted-foreground text-center">
-                            {language === 'bn' ? 'কোন ফ্ল্যাট উপলব্ধ নেই' : 'No flats available'}
-                          </div>
-                        ) : (
-                          (signupRole === 'owner' ? availableFlatsForOwner : availableFlatsForTenant).map((flat) => (
-                            <SelectItem key={flat.id} value={flat.id}>
-                              {language === 'bn' ? `ফ্ল্যাট ${flat.flat_number}` : `Flat ${flat.flat_number}`} 
-                              {flat.status !== 'vacant' && ` (${flat.status})`}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="signup-property">{language === 'bn' ? 'প্রপার্টির নাম' : 'Property Name'}</Label>
+                    <Input
+                      id="signup-property"
+                      type="text"
+                      value={signupPropertyName}
+                      onChange={(e) => setSignupPropertyName(e.target.value)}
+                      placeholder={language === 'bn' ? 'যেমন: গ্রীন ভিউ অ্যাপার্টমেন্ট' : 'e.g., Green View Apartment'}
+                      required
+                    />
                   </div>
                 )}
 
