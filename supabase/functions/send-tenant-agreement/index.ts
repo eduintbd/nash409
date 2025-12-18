@@ -123,7 +123,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Building Management <onboarding@resend.dev>",
+        from: "NASH-MS <support@eduintbd.cloud>",
         to: [data.tenantEmail],
         subject: `Tenant Agreement for Flat ${data.flatNumber} / ফ্ল্যাট ${data.flatNumber} এর ভাড়াটিয়া চুক্তি`,
         html: emailHtml,
