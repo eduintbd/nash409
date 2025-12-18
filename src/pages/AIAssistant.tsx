@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Bot, User, Send, Sparkles } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -12,26 +14,74 @@ interface Message {
   content: string;
 }
 
-const suggestedQuestions = [
-  "Show flats with pending payments",
-  "What's the total expense this month?",
-  "How many service requests are open?",
-  "List all vacant flats",
-];
-
 const AIAssistant = () => {
+  const { user, userRole, userFlatIds, ownerId } = useAuth();
+  
+  const getSuggestedQuestions = () => {
+    if (userRole === 'admin') {
+      return [
+        "Show flats with pending payments",
+        "What's the total expense this month?",
+        "How many service requests are open?",
+        "List all vacant flats",
+        "What is the total income vs expenses?",
+      ];
+    } else if (userRole === 'owner') {
+      return [
+        "What are my pending receivables?",
+        "Show my tenant details",
+        "What is my total income received?",
+        "Any service requests for my properties?",
+      ];
+    } else {
+      return [
+        "What are my pending dues?",
+        "When is my next payment due?",
+        "Show my payment history",
+        "What is my rent amount?",
+      ];
+    }
+  };
+
+  const getWelcomeMessage = () => {
+    const currentDate = new Date().toLocaleDateString('en-BD', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      timeZone: 'Asia/Dhaka'
+    });
+    
+    if (userRole === 'admin') {
+      return `Hello! I'm your Building Management Assistant. Today is ${currentDate}. I have access to all building data including flats, payments, expenses, and service requests. How can I help you?`;
+    } else if (userRole === 'owner') {
+      return `Hello! I'm your Property Assistant. Today is ${currentDate}. I can help you with information about your properties, tenants, and payments. What would you like to know?`;
+    } else {
+      return `Hello! I'm your Tenant Assistant. Today is ${currentDate}. I can help you with your rent details, payment status, and service requests. How can I assist you?`;
+    }
+  };
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! I'm your Building Management Assistant. I can help you with queries about flats, payments, expenses, and service requests. What would you like to know?",
+      content: getWelcomeMessage(),
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -43,37 +93,106 @@ const AIAssistant = () => {
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses: Record<string, string> = {
-        'pending': "Based on current records, there are **3 flats** with pending payments:\n\n- **A-103** (₹4,500 - Unpaid)\n- **A-104** (₹5,000 - Overdue)\n- **A-202** (₹4,500 - Unpaid)\n\nTotal pending: **₹14,000**\n\nWould you like me to send payment reminders?",
-        'expense': "Here's the expense summary for December 2024:\n\n| Category | Amount |\n|----------|--------|\n| Security | ₹36,000 |\n| Cleaning | ₹12,000 |\n| Electricity | ₹8,500 |\n| Elevator | ₹5,000 |\n| Repairs | ₹4,500 |\n| Water | ₹3,500 |\n\n**Total: ₹69,500**",
-        'service': "Currently there are **2 open** service requests:\n\n1. **Water leakage** (A-103) - High Priority\n2. **Streetlight not working** - Medium Priority\n\nAnd **1 in-progress**:\n- **AC power fluctuation** (A-201)\n\nWould you like details on any specific request?",
-        'vacant': "There is **1 vacant flat** currently:\n\n- **A-203** (Floor 2, 1000 sq.ft)\n  - Owner: Arjun Reddy\n  - Available since: November 2024\n\nWould you like to list it for rent?",
-      };
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          message: input,
+          userId: user?.id,
+          userRole,
+          flatIds: userFlatIds,
+          ownerId,
+        }),
+      });
 
-      const lowercaseInput = input.toLowerCase();
-      let response = "I can help you with information about flats, payments, expenses, and service requests. Could you please be more specific about what you'd like to know?";
-
-      if (lowercaseInput.includes('pending') || lowercaseInput.includes('payment') || lowercaseInput.includes('due')) {
-        response = responses['pending'];
-      } else if (lowercaseInput.includes('expense') || lowercaseInput.includes('cost')) {
-        response = responses['expense'];
-      } else if (lowercaseInput.includes('service') || lowercaseInput.includes('request') || lowercaseInput.includes('open')) {
-        response = responses['service'];
-      } else if (lowercaseInput.includes('vacant') || lowercaseInput.includes('empty')) {
-        response = responses['vacant'];
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
       }
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response,
-      };
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
 
-      setMessages(prev => [...prev, assistantMessage]);
+      const decoder = new TextDecoder();
+      let assistantContent = '';
+      const assistantMessageId = (Date.now() + 1).toString();
+
+      // Add empty assistant message
+      setMessages(prev => [...prev, {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+      }]);
+
+      let textBuffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => prev.map(m => 
+                m.id === assistantMessageId 
+                  ? { ...m, content: assistantContent }
+                  : m
+              ));
+            }
+          } catch {
+            // Incomplete JSON, continue
+          }
+        }
+      }
+
+      // Handle remaining buffer
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split('\n')) {
+          if (!raw || raw.startsWith(':') || !raw.startsWith('data: ')) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => prev.map(m => 
+                m.id === assistantMessageId 
+                  ? { ...m, content: assistantContent }
+                  : m
+              ));
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    } catch (error) {
+      console.error('AI Assistant error:', error);
+      toast.error('Failed to get response. Please try again.');
+      // Remove the empty assistant message if error
+      setMessages(prev => prev.filter(m => m.content !== ''));
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleSuggestion = (question: string) => {
@@ -93,7 +212,7 @@ const AIAssistant = () => {
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <span className="text-sm">
-              <strong>AI-powered queries</strong> - Ask natural language questions about your building data
+              <strong>AI-powered queries</strong> - Ask natural language questions about your {userRole === 'admin' ? 'building' : userRole === 'owner' ? 'property' : 'rental'} data
             </span>
           </div>
         </div>
@@ -127,7 +246,7 @@ const AIAssistant = () => {
                 )}
               </div>
             ))}
-            {isLoading && (
+            {isLoading && messages[messages.length - 1]?.role === 'user' && (
               <div className="flex gap-3">
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Bot className="h-4 w-4 text-primary" />
@@ -141,6 +260,7 @@ const AIAssistant = () => {
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </CardContent>
 
           {/* Suggestions */}
@@ -148,7 +268,7 @@ const AIAssistant = () => {
             <div className="px-4 pb-2">
               <p className="text-xs text-muted-foreground mb-2">Suggested questions:</p>
               <div className="flex flex-wrap gap-2">
-                {suggestedQuestions.map((question) => (
+                {getSuggestedQuestions().map((question) => (
                   <Button
                     key={question}
                     variant="outline"
