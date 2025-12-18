@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFlats, useCreateFlat, useUpdateFlat } from '@/hooks/useFlats';
 import { useMyOwnerFlats, useAddOwnerFlat, useRemoveOwnerFlat } from '@/hooks/useOwnerFlats';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTenants, useDeleteTenant } from '@/hooks/useTenants';
+import { useOwners } from '@/hooks/useOwners';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,25 +16,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Plus, Pencil, Trash2, Home, BarChart3 } from 'lucide-react';
+import { Building2, Plus, Pencil, Trash2, Home, BarChart3, Users, UserPlus, Mail, Phone, Calendar, FileText, Send } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PropertyAnalytics } from '@/components/dashboard/PropertyAnalytics';
+import { TenantForm } from '@/components/forms/TenantForm';
+import { formatBDT } from '@/lib/currency';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function MyProperties() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { data: allFlats = [] } = useFlats();
   const { data: ownerFlats = [], isLoading } = useMyOwnerFlats(user?.id);
+  const { data: tenants = [] } = useTenants();
+  const { data: owners = [] } = useOwners();
   const createFlat = useCreateFlat();
   const updateFlat = useUpdateFlat();
   const addOwnerFlat = useAddOwnerFlat();
   const removeOwnerFlat = useRemoveOwnerFlat();
+  const deleteTenant = useDeleteTenant();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddExistingDialog, setShowAddExistingDialog] = useState(false);
   const [deleteFlat, setDeleteFlat] = useState<any>(null);
   const [editingFlat, setEditingFlat] = useState<any>(null);
+  const [tenantFormOpen, setTenantFormOpen] = useState(false);
+  const [editTenant, setEditTenant] = useState<any>(null);
+  const [deleteTenantId, setDeleteTenantId] = useState<string | null>(null);
+  const [selectedFlatForTenant, setSelectedFlatForTenant] = useState<string>('');
+  const [sendingAgreement, setSendingAgreement] = useState<string | null>(null);
   const [newFlatData, setNewFlatData] = useState({
     flat_number: '',
     building_name: '',
@@ -70,16 +84,39 @@ export default function MyProperties() {
     sqft: language === 'bn' ? 'বর্গফুট' : 'sq ft',
     myProperties: language === 'bn' ? 'আমার সম্পত্তি' : 'My Properties',
     analytics: language === 'bn' ? 'বিশ্লেষণ' : 'Analytics',
+    tenants: language === 'bn' ? 'ভাড়াটিয়া' : 'Tenants',
+    tenant: language === 'bn' ? 'ভাড়াটিয়া' : 'Tenant',
+    addTenant: language === 'bn' ? 'ভাড়াটিয়া যোগ করুন' : 'Add Tenant',
+    noTenant: language === 'bn' ? 'কোন ভাড়াটিয়া নেই' : 'No tenant',
+    rentAmount: language === 'bn' ? 'ভাড়া' : 'Rent',
+    startDate: language === 'bn' ? 'শুরু' : 'Start Date',
+    perMonth: language === 'bn' ? '/মাস' : '/month',
+    confirmDelete: language === 'bn' ? 'মুছে ফেলা নিশ্চিত করুন' : 'Confirm Delete',
+    deleteWarning: language === 'bn' ? 'এই ভাড়াটিয়া মুছে ফেলতে চান?' : 'Are you sure you want to remove this tenant?',
+    sendAgreement: language === 'bn' ? 'চুক্তি পাঠান' : 'Send Agreement',
+    agreementStatus: language === 'bn' ? 'চুক্তির অবস্থা' : 'Agreement Status',
+    pending: language === 'bn' ? 'অপেক্ষমাণ' : 'Pending',
+    agreed: language === 'bn' ? 'সম্মত' : 'Agreed',
+    sent: language === 'bn' ? 'পাঠানো হয়েছে' : 'Sent',
   };
 
   // Get owner ID from ownerFlats data
-  const ownerId = ownerFlats.length > 0 ? ownerFlats[0].owner_id : null;
+  const myOwnerRecord = useMemo(() => {
+    return owners?.find(o => o.user_id === user?.id);
+  }, [owners, user?.id]);
+  
+  const ownerId = ownerFlats.length > 0 ? ownerFlats[0].owner_id : myOwnerRecord?.id;
 
   // Filter out flats already owned by this owner
   const ownedFlatIds = ownerFlats.map((of: any) => of.flat_id);
   const availableFlats = allFlats.filter(flat => 
     !ownedFlatIds.includes(flat.id) && flat.status === 'vacant'
   );
+
+  // Get tenants for owned flats
+  const myTenants = useMemo(() => {
+    return tenants.filter(t => ownedFlatIds.includes(t.flat_id));
+  }, [tenants, ownedFlatIds]);
 
   // Calculate summary
   const totalProperties = ownerFlats.length;
@@ -139,6 +176,34 @@ export default function MyProperties() {
     setDeleteFlat(null);
   };
 
+  const handleDeleteTenant = async () => {
+    if (deleteTenantId) {
+      await deleteTenant.mutateAsync(deleteTenantId);
+      setDeleteTenantId(null);
+    }
+  };
+
+  const handleSendAgreement = async (tenant: any) => {
+    if (!tenant.email) {
+      toast.error(language === 'bn' ? 'ভাড়াটিয়ার ইমেইল নেই' : 'Tenant has no email address');
+      return;
+    }
+
+    setSendingAgreement(tenant.id);
+    try {
+      const { error } = await supabase.functions.invoke('send-tenant-agreement', {
+        body: { tenantId: tenant.id }
+      });
+
+      if (error) throw error;
+      toast.success(language === 'bn' ? 'চুক্তি পাঠানো হয়েছে' : 'Agreement sent successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send agreement');
+    } finally {
+      setSendingAgreement(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'owner-occupied':
@@ -150,8 +215,24 @@ export default function MyProperties() {
     }
   };
 
+  const getAgreementBadge = (tenant: any) => {
+    if (tenant.agreement_status === 'agreed') {
+      return <Badge className="bg-success/10 text-success">{t.agreed}</Badge>;
+    }
+    if (tenant.invitation_sent_at) {
+      return <Badge className="bg-warning/10 text-warning">{t.sent}</Badge>;
+    }
+    return <Badge variant="secondary">{t.pending}</Badge>;
+  };
+
+  const getTenantForFlat = (flatId: string) => {
+    return tenants.find(t => t.flat_id === flatId);
+  };
+
   // Extract flats for analytics
   const ownerFlatsData = ownerFlats.map((of: any) => of.flats).filter(Boolean);
+
+  const locale = language === 'bn' ? 'bn-BD' : 'en-US';
 
   return (
     <MainLayout>
@@ -166,6 +247,10 @@ export default function MyProperties() {
             <TabsTrigger value="my-properties">
               <Building2 className="h-4 w-4 mr-2" />
               {t.myProperties}
+            </TabsTrigger>
+            <TabsTrigger value="tenants">
+              <Users className="h-4 w-4 mr-2" />
+              {t.tenants}
             </TabsTrigger>
             <TabsTrigger value="analytics">
               <BarChart3 className="h-4 w-4 mr-2" />
@@ -353,43 +438,55 @@ export default function MyProperties() {
                           <TableHead>{t.flatNumber}</TableHead>
                           <TableHead>{t.floor}</TableHead>
                           <TableHead>{t.size}</TableHead>
-                          <TableHead>{t.parking}</TableHead>
+                          <TableHead>{t.tenant}</TableHead>
                           <TableHead>{t.status}</TableHead>
                           <TableHead className="text-right">{t.actions}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {ownerFlats.map((ownerFlat: any) => (
-                          <TableRow key={ownerFlat.id}>
-                            <TableCell className="font-medium">{ownerFlat.flats?.building_name || '-'}</TableCell>
-                            <TableCell>{ownerFlat.flats?.flat_number}</TableCell>
-                            <TableCell>{ownerFlat.flats?.floor}</TableCell>
-                            <TableCell>{ownerFlat.flats?.size?.toLocaleString()} {t.sqft}</TableCell>
-                            <TableCell>{ownerFlat.flats?.parking_spot || '-'}</TableCell>
-                            <TableCell>{getStatusBadge(ownerFlat.flats?.status)}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    setEditingFlat(ownerFlat.flats);
-                                    setShowEditDialog(true);
-                                  }}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setDeleteFlat(ownerFlat)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {ownerFlats.map((ownerFlat: any) => {
+                          const tenant = getTenantForFlat(ownerFlat.flat_id);
+                          return (
+                            <TableRow key={ownerFlat.id}>
+                              <TableCell className="font-medium">{ownerFlat.flats?.building_name || '-'}</TableCell>
+                              <TableCell>{ownerFlat.flats?.flat_number}</TableCell>
+                              <TableCell>{ownerFlat.flats?.floor}</TableCell>
+                              <TableCell>{ownerFlat.flats?.size?.toLocaleString()} {t.sqft}</TableCell>
+                              <TableCell>
+                                {tenant ? (
+                                  <div className="text-sm">
+                                    <p className="font-medium">{tenant.name}</p>
+                                    <p className="text-muted-foreground text-xs">{formatBDT(tenant.rent_amount)}{t.perMonth}</p>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">{t.noTenant}</span>
+                                )}
+                              </TableCell>
+                              <TableCell>{getStatusBadge(ownerFlat.flats?.status)}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setEditingFlat(ownerFlat.flats);
+                                      setShowEditDialog(true);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setDeleteFlat(ownerFlat)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -398,13 +495,121 @@ export default function MyProperties() {
             </Card>
           </TabsContent>
 
+          {/* Tenants Tab */}
+          <TabsContent value="tenants" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">{t.tenants}</h2>
+              <Button onClick={() => { setEditTenant(null); setSelectedFlatForTenant(''); setTenantFormOpen(true); }}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                {t.addTenant}
+              </Button>
+            </div>
+
+            {myTenants.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <UserPlus className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground mb-4">{t.noTenant}</p>
+                  <Button onClick={() => { setEditTenant(null); setTenantFormOpen(true); }}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    {t.addTenant}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {myTenants.map((tenant: any) => {
+                  const flat = allFlats.find(f => f.id === tenant.flat_id);
+                  return (
+                    <Card key={tenant.id}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg">{tenant.name}</CardTitle>
+                            <CardDescription className="flex items-center gap-2 mt-1">
+                              <Home className="h-3 w-3" />
+                              {flat?.flat_number || '-'}
+                              {flat?.building_name && ` • ${flat.building_name}`}
+                            </CardDescription>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => { setEditTenant(tenant); setTenantFormOpen(true); }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive"
+                              onClick={() => setDeleteTenantId(tenant.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {tenant.email && (
+                          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Mail className="h-4 w-4" /> {tenant.email}
+                          </p>
+                        )}
+                        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="h-4 w-4" /> {tenant.phone}
+                        </p>
+                        
+                        <div className="pt-3 border-t space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">{t.rentAmount}:</span>
+                            <span className="font-medium">{formatBDT(tenant.rent_amount)}{t.perMonth}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">{t.startDate}:</span>
+                            <span className="text-sm flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {new Date(tenant.start_date).toLocaleDateString(locale)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">{t.agreementStatus}:</span>
+                            {getAgreementBadge(tenant)}
+                          </div>
+                        </div>
+
+                        {/* Agreement Actions */}
+                        <div className="pt-3 border-t">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleSendAgreement(tenant)}
+                            disabled={sendingAgreement === tenant.id || !tenant.email}
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            {sendingAgreement === tenant.id 
+                              ? (language === 'bn' ? 'পাঠানো হচ্ছে...' : 'Sending...') 
+                              : t.sendAgreement
+                            }
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="analytics">
             <PropertyAnalytics flats={ownerFlatsData} />
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Edit Dialog */}
+      {/* Edit Flat Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
@@ -477,7 +682,7 @@ export default function MyProperties() {
         </DialogContent>
       </Dialog>
 
-      {/* Remove Confirmation */}
+      {/* Remove Property Confirmation */}
       <AlertDialog open={!!deleteFlat} onOpenChange={() => setDeleteFlat(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -490,6 +695,30 @@ export default function MyProperties() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete Tenant Confirmation */}
+      <AlertDialog open={!!deleteTenantId} onOpenChange={() => setDeleteTenantId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.confirmDelete}</AlertDialogTitle>
+            <AlertDialogDescription>{t.deleteWarning}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTenant} className="bg-destructive">
+              {t.remove}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Tenant Form */}
+      <TenantForm 
+        open={tenantFormOpen} 
+        onOpenChange={setTenantFormOpen} 
+        editData={editTenant}
+        preselectedFlatId={selectedFlatForTenant}
+      />
     </MainLayout>
   );
 }
