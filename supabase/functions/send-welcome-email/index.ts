@@ -159,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
             <p>✅ If you'd like a guided walkthrough, you can book a free demo or talk to the team.</p>
             
             <div class="contact-box">
-              <div class="contact-item">📍 264 Elephant Road, Dhaka</div>
+              <div class="contact-item">📍 NASH Samad Garden, 409/Ga/1, SP Road, Kallyanpur</div>
               <div class="contact-item">📞 +880 1898‑934‑855</div>
               <div class="contact-item">🌐 nash.eduintbd.ai</div>
             </div>
@@ -168,7 +168,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div class="footer">
               <p>© 2024 NASH‑MS by EDUINTBD. All rights reserved.</p>
-              <p>264 Elephant Road, Dhaka, Bangladesh</p>
+              <p>NASH Samad Garden, 409/Ga/1, SP Road, Kallyanpur, Dhaka</p>
             </div>
           </div>
         </body>
