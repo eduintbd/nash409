@@ -39,14 +39,14 @@ import {
 } from '@/components/ui/alert-dialog';
 import { 
   Search, Building2, User, Phone, Mail, Car, Plus, Pencil, Trash2, 
-  MapPin, Home, BarChart3, GripVertical, Save, X, Shield, Unlink 
+  MapPin, Home, BarChart3, GripVertical, Save, X, Shield, Unlink, FolderOpen
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
 import FlatForm from '@/components/forms/FlatForm';
 import { PropertyAnalytics } from '@/components/dashboard/PropertyAnalytics';
 import { OwnerForm } from '@/components/forms/OwnerForm';
-import { PropertyForm } from '@/components/forms/PropertyForm';
+import { PropertyManagement } from '@/components/property/PropertyManagement';
 import {
   DndContext,
   closestCenter,
@@ -87,7 +87,6 @@ const Flats = () => {
   const [editFlat, setEditFlat] = useState<Flat | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Flat | null>(null);
   const [showOwnerForm, setShowOwnerForm] = useState(false);
-  const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [editOwnerData, setEditOwnerData] = useState<any>(null);
   const [editOwnerFlatIds, setEditOwnerFlatIds] = useState<string[]>([]);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -325,6 +324,10 @@ const Flats = () => {
                 <Building2 className="h-4 w-4 mr-2" />
                 {language === 'bn' ? 'সকল ফ্ল্যাট' : 'All Flats'}
               </TabsTrigger>
+              <TabsTrigger value="property-management">
+                <FolderOpen className="h-4 w-4 mr-2" />
+                {language === 'bn' ? 'প্রপার্টি ম্যানেজমেন্ট' : 'Property Management'}
+              </TabsTrigger>
               <TabsTrigger value="owner-properties">
                 <User className="h-4 w-4 mr-2" />
                 {language === 'bn' ? 'মালিকদের সম্পত্তি' : 'Owner Properties'}
@@ -436,6 +439,11 @@ const Flats = () => {
               </div>
             </TabsContent>
 
+            {/* Property Management Tab */}
+            <TabsContent value="property-management" className="space-y-4">
+              <PropertyManagement onEditFlat={handleEdit} />
+            </TabsContent>
+
             <TabsContent value="owner-properties" className="space-y-4">
               {/* Search and Add New Property */}
               <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -448,7 +456,7 @@ const Flats = () => {
                     className="pl-9"
                   />
                 </div>
-                <Button onClick={() => setShowPropertyForm(true)}>
+                <Button onClick={() => setActiveTab('property-management')}>
                   <Plus className="h-4 w-4 mr-2" />
                   {language === 'bn' ? 'নতুন প্রপার্টি' : 'Add Property'}
                 </Button>
@@ -792,11 +800,6 @@ const Flats = () => {
         existingFlatIds={editOwnerFlatIds}
       />
 
-      {/* Property Form for adding new properties */}
-      <PropertyForm
-        open={showPropertyForm}
-        onOpenChange={setShowPropertyForm}
-      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
