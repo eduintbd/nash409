@@ -549,7 +549,7 @@ const LandingPage: React.FC = () => {
                   {t.demo.description}
                 </p>
                 <div className="mt-6 space-y-2 text-sm text-slate-400">
-                  <p>📍 NASH Samad Garden, 409/Ga/1, SP Road, Kallyanpur</p>
+                  <p>📍 264 Elephant Road, Dhaka</p>
                   <p>📞 +880 1898‑934‑855</p>
                   <p>🌐 nash.eduintbd.ai</p>
                 </div>
