@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Building2, CheckCircle, Users, Bell, Shield, BarChart3, MessageSquare, Camera } from "lucide-react";
+import { Building2, CheckCircle, Users, Bell, Shield, BarChart3, MessageSquare, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-
+import { QRCodeSVG } from "qrcode.react";
+import { useLanguage } from "@/contexts/LanguageContext";
 const LandingPage: React.FC = () => {
   const [formData, setFormData] = useState({
     fullName: "",
@@ -55,11 +56,14 @@ const LandingPage: React.FC = () => {
               Book Demo
             </a>
           </div>
-          <Link to="/auth">
-            <Button className="bg-emerald-500 text-slate-950 hover:bg-emerald-400 text-xs px-4 py-2">
-              Get Started
-            </Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <Link to="/auth">
+              <Button className="bg-emerald-500 text-slate-950 hover:bg-emerald-400 text-xs px-4 py-2">
+                Get Started
+              </Button>
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -425,6 +429,25 @@ const LandingPage: React.FC = () => {
         </section>
       </main>
 
+      {/* QR Code Section */}
+      <section className="bg-slate-900 py-12">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="flex flex-col items-center justify-center gap-6 rounded-2xl border border-slate-800 bg-slate-950/50 p-8">
+            <h3 className="text-lg font-semibold text-slate-50">Share NASH-MS</h3>
+            <p className="text-sm text-slate-400 text-center">Scan this QR code to visit our landing page</p>
+            <div className="rounded-xl bg-white p-4">
+              <QRCodeSVG 
+                value={typeof window !== 'undefined' ? window.location.origin : 'https://nash-ms.lovable.app'}
+                size={150}
+                level="H"
+                includeMargin={false}
+              />
+            </div>
+            <p className="text-xs text-slate-500">Share with building managers and committees</p>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-slate-800 bg-slate-950">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 text-xs text-slate-500 md:flex-row">
@@ -478,6 +501,20 @@ const PricingCard: React.FC<PricingCardProps> = ({
         </Button>
       </a>
     </div>
+  );
+};
+
+const LanguageToggle: React.FC = () => {
+  const { language, setLanguage } = useLanguage();
+  
+  return (
+    <button
+      onClick={() => setLanguage(language === 'en' ? 'bn' : 'en')}
+      className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-slate-100 transition-colors"
+    >
+      <Globe className="h-3.5 w-3.5" />
+      {language === 'en' ? 'বাংলা' : 'English'}
+    </button>
   );
 };
 
