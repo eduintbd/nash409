@@ -4,11 +4,9 @@ import { CustomStatCard } from '@/components/dashboard/CustomStatCard';
 import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer';
 import { DraggableDashboardGrid } from '@/components/dashboard/DraggableDashboardGrid';
 import { PropertyOverviewCard } from '@/components/dashboard/PropertyOverviewCard';
-import { FinancialSummaryCard } from '@/components/dashboard/FinancialSummaryCard';
 import { OwnerPropertyCard } from '@/components/dashboard/OwnerPropertyCard';
-import { OwnerFinancialCard } from '@/components/dashboard/OwnerFinancialCard';
 import { TenantPropertyCard } from '@/components/dashboard/TenantPropertyCard';
-import { TenantFinancialCard } from '@/components/dashboard/TenantFinancialCard';
+import { FinancialWaterfallChart } from '@/components/dashboard/FinancialWaterfallChart';
 import { useFlats } from '@/hooks/useFlats';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
@@ -75,7 +73,6 @@ const Dashboard = () => {
   const ownerTotalReceived = userInvoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
   const ownerTotalReceivable = userInvoices?.filter(i => i.status !== 'paid').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
   const ownerServiceChargePaid = userInvoices?.filter(i => i.status === 'paid' && (i as any).invoice_type === 'service_charge').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
-  const ownerServiceChargePending = userInvoices?.filter(i => i.status !== 'paid' && (i as any).invoice_type === 'service_charge').reduce((sum, i) => sum + Number(i.amount), 0) || 0;
   const ownerRentedFlats = ownerFlats?.filter(f => f.status === 'tenant').length || 0;
   const ownerSelfOccupied = ownerFlats?.filter(f => f.status === 'owner-occupied').length || 0;
   const ownerVacant = ownerFlats?.filter(f => f.status === 'vacant').length || 0;
@@ -108,6 +105,35 @@ const Dashboard = () => {
 
   const header = getRoleHeader();
 
+  // Financial waterfall data for each role
+  const getFinancialData = () => {
+    if (isAdmin) {
+      const netBalance = totalIncome - totalExpenses;
+      return [
+        { name: 'Income', nameBn: 'আয়', value: totalIncome, fill: 'hsl(var(--success))', link: '/invoices?status=paid' },
+        { name: 'Expenses', nameBn: 'খরচ', value: -totalExpenses, fill: 'hsl(var(--destructive))', link: '/expenses' },
+        { name: 'Receivable', nameBn: 'বকেয়া', value: pendingAmount, fill: 'hsl(var(--warning))', link: '/invoices?status=unpaid' },
+        { name: 'Net Balance', nameBn: 'নিট ব্যালেন্স', value: netBalance, fill: 'hsl(var(--primary))', link: '/invoices' },
+      ];
+    }
+    if (isOwner) {
+      const netBalance = ownerTotalReceived - ownerServiceChargePaid;
+      return [
+        { name: 'Received', nameBn: 'প্রাপ্ত', value: ownerTotalReceived, fill: 'hsl(var(--success))', link: '/invoices?status=paid' },
+        { name: 'Service Charge', nameBn: 'সার্ভিস চার্জ', value: -ownerServiceChargePaid, fill: 'hsl(var(--destructive))', link: '/invoices?type=service_charge' },
+        { name: 'Receivable', nameBn: 'প্রাপ্য', value: ownerTotalReceivable, fill: 'hsl(var(--warning))', link: '/invoices?status=unpaid' },
+        { name: 'Net Balance', nameBn: 'নিট ব্যালেন্স', value: netBalance, fill: 'hsl(var(--primary))', link: '/invoices' },
+      ];
+    }
+    // Tenant
+    return [
+      { name: 'Paid', nameBn: 'পরিশোধিত', value: tenantTotalPaid, fill: 'hsl(var(--success))', link: '/invoices?status=paid' },
+      { name: 'Payable', nameBn: 'পরিশোধযোগ্য', value: tenantTotalPayable, fill: 'hsl(var(--warning))', link: '/invoices?status=unpaid' },
+      { name: 'Pending Bills', nameBn: 'বকেয়া বিল', value: pendingPayments, fill: 'hsl(var(--destructive))', link: '/invoices?status=unpaid' },
+      { name: 'Total Due', nameBn: 'মোট বকেয়া', value: tenantTotalPayable, fill: 'hsl(var(--primary))', link: '/invoices' },
+    ];
+  };
+
   // Build card content based on role
   const getCardContent = (card: DashboardCard): ReactNode => {
     const wrapWithLink = (content: ReactNode, link?: string) => {
@@ -137,10 +163,8 @@ const Dashboard = () => {
           );
         case 'financial-summary':
           return (
-            <FinancialSummaryCard
-              totalIncome={totalIncome}
-              totalExpenses={totalExpenses}
-              receivable={pendingAmount}
+            <FinancialWaterfallChart
+              data={getFinancialData()}
               language={language}
             />
           );
@@ -184,11 +208,8 @@ const Dashboard = () => {
           );
         case 'financial-summary':
           return (
-            <OwnerFinancialCard
-              totalReceived={ownerTotalReceived}
-              totalReceivable={ownerTotalReceivable}
-              serviceChargePaid={ownerServiceChargePaid}
-              serviceChargePending={ownerServiceChargePending}
+            <FinancialWaterfallChart
+              data={getFinancialData()}
               language={language}
             />
           );
@@ -230,10 +251,8 @@ const Dashboard = () => {
           );
         case 'financial-summary':
           return (
-            <TenantFinancialCard
-              totalPaid={tenantTotalPaid}
-              totalPayable={tenantTotalPayable}
-              pendingBills={pendingPayments}
+            <FinancialWaterfallChart
+              data={getFinancialData()}
               language={language}
             />
           );
