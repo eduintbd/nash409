@@ -30,7 +30,7 @@ export function Sidebar() {
 
   // Full navigation for admin
   const adminNavigation = [
-    { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
+    { name: t.nav.dashboard, href: '/dashboard', icon: LayoutDashboard },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
     { name: t.nav.residents, href: '/residents', icon: Users },
     { name: t.nav.employees, href: '/employees', icon: UserCog },
@@ -44,7 +44,7 @@ export function Sidebar() {
 
   // Limited navigation for owners
   const ownerNavigation = [
-    { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
+    { name: t.nav.dashboard, href: '/dashboard', icon: LayoutDashboard },
     { name: language === 'bn' ? 'আমার সম্পত্তি' : 'My Properties', href: '/my-properties', icon: Building2 },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
     { name: language === 'bn' ? 'আমার ভাড়াটিয়া' : 'My Tenant', href: '/my-tenant', icon: UserPlus },
@@ -57,7 +57,7 @@ export function Sidebar() {
 
   // Minimal navigation for tenants
   const tenantNavigation = [
-    { name: t.nav.dashboard, href: '/', icon: LayoutDashboard },
+    { name: t.nav.dashboard, href: '/dashboard', icon: LayoutDashboard },
     { name: t.nav.invoices, href: '/invoices', icon: Receipt },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
   ];
