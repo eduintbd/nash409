@@ -19,13 +19,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -35,7 +28,6 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { Check, X, Loader2, UserCheck, Users, Edit, Key, Search } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
-import { useFlats } from '@/hooks/useFlats';
 
 interface PendingUser {
   id: string;
@@ -67,8 +59,6 @@ const UserApprovals = () => {
   const { language } = useLanguage();
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const { data: flats } = useFlats();
-  const [selectedFlats, setSelectedFlats] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState('pending');
   const [userSearch, setUserSearch] = useState('');
   
@@ -151,13 +141,7 @@ const UserApprovals = () => {
 
   // Approve user mutation
   const approveMutation = useMutation({
-    mutationFn: async ({ userId, requestedRole, flatId }: { userId: string; requestedRole: string; flatId?: string }) => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, email')
-        .eq('id', userId)
-        .single();
-
+    mutationFn: async ({ userId, requestedRole }: { userId: string; requestedRole: string }) => {
       let finalRole: 'owner' | 'tenant' | 'user' = 'user';
       if (requestedRole === 'owner') finalRole = 'owner';
       else if (requestedRole === 'tenant') finalRole = 'tenant';
@@ -168,44 +152,6 @@ const UserApprovals = () => {
         .eq('user_id', userId);
 
       if (roleError) throw roleError;
-
-      if (finalRole === 'owner' && flatId && profile) {
-        const { data: newOwner, error: ownerError } = await supabase
-          .from('owners')
-          .insert({
-            user_id: userId,
-            name: profile.full_name || 'Unknown',
-            email: profile.email,
-            phone: '',
-            flat_id: flatId,
-          })
-          .select('id')
-          .single();
-        if (ownerError) throw ownerError;
-
-        if (newOwner) {
-          await supabase.from('owner_flats').insert({
-            owner_id: newOwner.id,
-            flat_id: flatId,
-          });
-        }
-
-        await supabase.from('flats').update({ status: 'owner-occupied' }).eq('id', flatId);
-      } else if (finalRole === 'tenant' && flatId && profile) {
-        const { error: tenantError } = await supabase
-          .from('tenants')
-          .insert({
-            user_id: userId,
-            name: profile.full_name || 'Unknown',
-            email: profile.email,
-            phone: '',
-            flat_id: flatId,
-            rent_amount: 0,
-          });
-        if (tenantError) throw tenantError;
-
-        await supabase.from('flats').update({ status: 'tenant' }).eq('id', flatId);
-      }
 
       return { userId, finalRole };
     },
@@ -331,16 +277,7 @@ const UserApprovals = () => {
   });
 
   const handleApprove = (userId: string, requestedRole: string) => {
-    const flatId = selectedFlats[userId];
-    if ((requestedRole === 'owner' || requestedRole === 'tenant') && !flatId) {
-      toast({
-        title: language === 'bn' ? 'ত্রুটি' : 'Error',
-        description: language === 'bn' ? 'অনুগ্রহ করে একটি ফ্ল্যাট নির্বাচন করুন' : 'Please select a flat first',
-        variant: 'destructive',
-      });
-      return;
-    }
-    approveMutation.mutate({ userId, requestedRole, flatId });
+    approveMutation.mutate({ userId, requestedRole });
   };
 
   const handleEditProfile = (user: UserWithProfile) => {
@@ -428,7 +365,6 @@ const UserApprovals = () => {
                         <TableHead>{language === 'bn' ? 'নাম' : 'Name'}</TableHead>
                         <TableHead>{language === 'bn' ? 'ইমেইল' : 'Email'}</TableHead>
                         <TableHead>{language === 'bn' ? 'অনুরোধিত ভূমিকা' : 'Requested Role'}</TableHead>
-                        <TableHead>{language === 'bn' ? 'ফ্ল্যাট' : 'Flat'}</TableHead>
                         <TableHead>{language === 'bn' ? 'তারিখ' : 'Date'}</TableHead>
                         <TableHead className="text-right">{language === 'bn' ? 'কার্যক্রম' : 'Actions'}</TableHead>
                       </TableRow>
@@ -444,33 +380,6 @@ const UserApprovals = () => {
                             <Badge variant="outline">
                               {getRoleLabel(user.requested_role)}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {(user.requested_role === 'owner' || user.requested_role === 'tenant') ? (
-                              <Select
-                                value={selectedFlats[user.user_id] || ''}
-                                onValueChange={(value) =>
-                                  setSelectedFlats(prev => ({ ...prev, [user.user_id]: value }))
-                                }
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue placeholder={language === 'bn' ? 'নির্বাচন' : 'Select'} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {flats?.filter(f =>
-                                    user.requested_role === 'owner'
-                                      ? f.status === 'vacant'
-                                      : (f.status === 'vacant' || f.status === 'owner-occupied')
-                                  ).map((flat) => (
-                                    <SelectItem key={flat.id} value={flat.id}>
-                                      {flat.flat_number}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {new Date(user.created_at).toLocaleDateString()}
