@@ -4,6 +4,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { CustomStatCard } from '@/components/dashboard/CustomStatCard';
 import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer';
 import { DraggableDashboardGrid } from '@/components/dashboard/DraggableDashboardGrid';
+import { PropertyOverviewCard } from '@/components/dashboard/PropertyOverviewCard';
 import { useFlats } from '@/hooks/useFlats';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
@@ -425,13 +426,24 @@ const Dashboard = () => {
   }
 
   // Admin/Staff Dashboard
+  // Calculate occupancy stats for property overview
+  const ownerOccupiedCount = flats?.filter(f => f.status === 'owner-occupied').length || 0;
+  const tenantOccupiedCount = flats?.filter(f => f.status === 'tenant').length || 0;
+  const vacantCount = flats?.filter(f => f.status === 'vacant').length || 0;
+
   // Build admin card content map
   const getAdminCardContent = (card: DashboardCard): ReactNode => {
     switch (card.id) {
-      case 'total-flats':
-        return <StatCard title={t.dashboard.totalFlats} value={flats?.length || 0} icon={Building2} variant="primary" />;
-      case 'occupied':
-        return <StatCard title={t.dashboard.occupied} value={occupiedFlats} icon={Users} variant="success" />;
+      case 'property-overview':
+        return (
+          <PropertyOverviewCard
+            totalFlats={flats?.length || 0}
+            ownerOccupied={ownerOccupiedCount}
+            tenantOccupied={tenantOccupiedCount}
+            vacant={vacantCount}
+            language={language}
+          />
+        );
       case 'pending-payments':
         return <StatCard title={t.dashboard.pendingPayments} value={pendingPayments} icon={Receipt} variant="warning" />;
       case 'service-requests':
@@ -531,28 +543,6 @@ const Dashboard = () => {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="stat-card border-0">
-            <CardHeader>
-              <CardTitle className="text-lg">{t.dashboard.flatStatus}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{t.dashboard.ownerOccupied}</span>
-                  <span className="font-semibold">{flats?.filter(f => f.status === 'owner-occupied').length || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{t.dashboard.tenantOccupied}</span>
-                  <span className="font-semibold">{flats?.filter(f => f.status === 'tenant').length || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{t.dashboard.vacant}</span>
-                  <span className="font-semibold">{flats?.filter(f => f.status === 'vacant').length || 0}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="stat-card border-0">
             <CardHeader>
               <CardTitle className="text-lg">{t.dashboard.employees}</CardTitle>
