@@ -1,6 +1,8 @@
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { CustomStatCard } from '@/components/dashboard/CustomStatCard';
+import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer';
 import { useFlats } from '@/hooks/useFlats';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
@@ -8,6 +10,7 @@ import { useEmployees } from '@/hooks/useEmployees';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDashboardCards } from '@/hooks/useDashboardCards';
 import { Building2, Users, Receipt, Wrench, TrendingUp, TrendingDown, Home, Wallet } from 'lucide-react';
 import { formatBDT } from '@/lib/currency';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +25,10 @@ const Dashboard = () => {
   const { data: requests, isLoading: loadingRequests } = useServiceRequests();
   const { data: employees, isLoading: loadingEmployees } = useEmployees();
   const { data: expenses, isLoading: loadingExpenses } = useExpenses();
+  
+  // Dashboard customization
+  const adminCards = useDashboardCards('admin');
+  const ownerCards = useDashboardCards('owner');
 
   const isResident = isOwner || isTenant;
 
@@ -191,11 +198,24 @@ const Dashboard = () => {
 
   // Owner Dashboard - with rental income from their flats
   if (isOwner) {
+    const isCardVisible = (cardId: string) => ownerCards.visibleCards.some(c => c.id === cardId);
+    const customCards = ownerCards.visibleCards.filter(c => c.type === 'custom');
+    
     return (
       <MainLayout>
         <Header 
           title={language === 'bn' ? 'আমার ড্যাশবোর্ড' : 'My Dashboard'}
           subtitle={language === 'bn' ? 'ফ্ল্যাট মালিকের প্যানেল' : 'Flat Owner Panel'}
+          actions={
+            <DashboardCustomizer
+              cards={ownerCards.cards}
+              onToggleVisibility={ownerCards.toggleCardVisibility}
+              onAddCustomCard={ownerCards.addCustomCard}
+              onRemoveCard={ownerCards.removeCard}
+              onUpdateCard={ownerCards.updateCard}
+              onResetToDefaults={ownerCards.resetToDefaults}
+            />
+          }
         />
         
         <div className="p-4 md:p-6 space-y-6 animate-fade-in">
@@ -329,7 +349,14 @@ const Dashboard = () => {
                 </Card>
               </div>
 
-              {/* Payment History Chart */}
+              {/* Custom Cards */}
+              {customCards.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                  {customCards.map((card) => (
+                    <CustomStatCard key={card.id} card={card} />
+                  ))}
+                </div>
+              )}
               {userInvoices && userInvoices.length > 0 && (
                 <OwnerPaymentChart invoices={userInvoices as any} language={language} />
               )}
@@ -395,11 +422,24 @@ const Dashboard = () => {
   }
 
   // Admin/Staff Dashboard
+  const isAdminCardVisible = (cardId: string) => adminCards.visibleCards.some(c => c.id === cardId);
+  const adminCustomCards = adminCards.visibleCards.filter(c => c.type === 'custom');
+  
   return (
     <MainLayout>
       <Header 
         title={t.dashboard.title}
         subtitle={t.dashboard.subtitle}
+        actions={
+          <DashboardCustomizer
+            cards={adminCards.cards}
+            onToggleVisibility={adminCards.toggleCardVisibility}
+            onAddCustomCard={adminCards.addCustomCard}
+            onRemoveCard={adminCards.removeCard}
+            onUpdateCard={adminCards.updateCard}
+            onResetToDefaults={adminCards.resetToDefaults}
+          />
+        }
       />
       
       <div className="p-6 space-y-6 animate-fade-in">
@@ -410,73 +450,91 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <StatCard
-              title={t.dashboard.totalFlats}
-              value={flats?.length || 0}
-              icon={Building2}
-              variant="primary"
-            />
-            <StatCard
-              title={t.dashboard.occupied}
-              value={occupiedFlats}
-              icon={Users}
-              variant="success"
-            />
-            <StatCard
-              title={t.dashboard.pendingPayments}
-              value={pendingPayments}
-              icon={Receipt}
-              variant="warning"
-            />
-            <StatCard
-              title={t.dashboard.serviceRequests}
-              value={openRequests}
-              icon={Wrench}
-              variant="destructive"
-            />
+            {isAdminCardVisible('total-flats') && (
+              <StatCard
+                title={t.dashboard.totalFlats}
+                value={flats?.length || 0}
+                icon={Building2}
+                variant="primary"
+              />
+            )}
+            {isAdminCardVisible('occupied') && (
+              <StatCard
+                title={t.dashboard.occupied}
+                value={occupiedFlats}
+                icon={Users}
+                variant="success"
+              />
+            )}
+            {isAdminCardVisible('pending-payments') && (
+              <StatCard
+                title={t.dashboard.pendingPayments}
+                value={pendingPayments}
+                icon={Receipt}
+                variant="warning"
+              />
+            )}
+            {isAdminCardVisible('service-requests') && (
+              <StatCard
+                title={t.dashboard.serviceRequests}
+                value={openRequests}
+                icon={Wrench}
+                variant="destructive"
+              />
+            )}
+            {/* Custom Cards */}
+            {adminCustomCards.map((card) => (
+              <CustomStatCard key={card.id} card={card} />
+            ))}
           </div>
         )}
 
         {/* Financial Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="stat-card border-0 bg-success/5">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-success" />
-                {t.dashboard.totalIncome}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-success">{formatBDT(totalIncome)}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t.dashboard.fromPaidInvoices}</p>
-            </CardContent>
-          </Card>
+          {isAdminCardVisible('total-income') && (
+            <Card className="stat-card border-0 bg-success/5">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-success" />
+                  {t.dashboard.totalIncome}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-success">{formatBDT(totalIncome)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.dashboard.fromPaidInvoices}</p>
+              </CardContent>
+            </Card>
+          )}
           
-          <Card className="stat-card border-0 bg-destructive/5">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-destructive" />
-                {t.dashboard.totalExpenses}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t.dashboard.allExpensesCombined}</p>
-            </CardContent>
-          </Card>
+          {isAdminCardVisible('total-expenses') && (
+            <Card className="stat-card border-0 bg-destructive/5">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <TrendingDown className="h-4 w-4 text-destructive" />
+                  {t.dashboard.totalExpenses}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t.dashboard.allExpensesCombined}</p>
+              </CardContent>
+            </Card>
+          )}
           
-          <Card className="stat-card border-0 bg-warning/5">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-warning" />
-                {t.dashboard.pendingAmount}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
-              <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {t.dashboard.invoicesPending}</p>
-            </CardContent>
-          </Card>
+          {isAdminCardVisible('pending-amount') && (
+            <Card className="stat-card border-0 bg-warning/5">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-warning" />
+                  {t.dashboard.pendingAmount}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {t.dashboard.invoicesPending}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Quick Stats */}
