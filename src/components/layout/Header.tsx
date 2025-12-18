@@ -19,9 +19,10 @@ import { toast } from '@/hooks/use-toast';
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  actions?: React.ReactNode;
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header({ title, subtitle, actions }: HeaderProps) {
   const { t, language } = useLanguage();
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ export function Header({ title, subtitle }: HeaderProps) {
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}
         </div>
+        {actions && <div className="ml-4">{actions}</div>}
       </div>
 
       <div className="flex items-center gap-3">
