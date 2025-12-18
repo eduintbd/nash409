@@ -162,37 +162,39 @@ const Dashboard = () => {
               </div>
 
               {/* Service Requests */}
-              <Card className="stat-card border-0">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Wrench className="h-5 w-5" />
-                    {language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'} ({openRequests} {language === 'bn' ? 'চলমান' : 'open'})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {userRequests?.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">{language === 'bn' ? 'কোনো অনুরোধ নেই' : 'No service requests'}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {userRequests?.slice(0, 5).map(request => (
-                        <div key={request.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <div>
-                            <p className="font-medium text-sm">{request.title}</p>
-                            <p className="text-xs text-muted-foreground">{request.category}</p>
+              <Link to="/service-requests" className="block">
+                <Card className="stat-card border-0 hover:scale-[1.02] transition-transform cursor-pointer">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Wrench className="h-5 w-5" />
+                      {language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'} ({openRequests} {language === 'bn' ? 'চলমান' : 'open'})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {userRequests?.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">{language === 'bn' ? 'কোনো অনুরোধ নেই' : 'No service requests'}</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {userRequests?.slice(0, 5).map(request => (
+                          <div key={request.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div>
+                              <p className="font-medium text-sm">{request.title}</p>
+                              <p className="text-xs text-muted-foreground">{request.category}</p>
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              request.status === 'open' ? 'bg-warning/10 text-warning' :
+                              request.status === 'in-progress' ? 'bg-primary/10 text-primary' :
+                              'bg-success/10 text-success'
+                            }`}>
+                              {request.status}
+                            </span>
                           </div>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            request.status === 'open' ? 'bg-warning/10 text-warning' :
-                            request.status === 'in-progress' ? 'bg-primary/10 text-primary' :
-                            'bg-success/10 text-success'
-                          }`}>
-                            {request.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
             </>
           )}
         </div>
@@ -340,18 +342,20 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
                 
-                <Card className="stat-card border-0 bg-destructive/5">
-                  <CardHeader className="pb-2">
-                    <CardDescription className="flex items-center gap-2">
-                      <Wrench className="h-4 w-4 text-destructive" />
-                      {language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl md:text-3xl font-bold text-destructive">{openRequests}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'চলমান অনুরোধ' : 'Open requests'}</p>
-                  </CardContent>
-                </Card>
+                <Link to="/service-requests" className="block">
+                  <Card className="stat-card border-0 bg-destructive/5 hover:scale-[1.02] transition-transform cursor-pointer">
+                    <CardHeader className="pb-2">
+                      <CardDescription className="flex items-center gap-2">
+                        <Wrench className="h-4 w-4 text-destructive" />
+                        {language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl md:text-3xl font-bold text-destructive">{openRequests}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'চলমান অনুরোধ' : 'Open requests'}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
               </div>
 
               {/* Custom Cards */}
@@ -389,36 +393,38 @@ const Dashboard = () => {
               </div>
 
               {/* Service Requests */}
-              <Card className="stat-card border-0">
-                <CardHeader>
-                  <CardTitle className="text-lg">{language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {userRequests?.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">{language === 'bn' ? 'কোনো অনুরোধ নেই' : 'No service requests'}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {userRequests?.slice(0, 5).map(request => (
-                        <div key={request.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <div>
-                            <p className="font-medium text-sm">{request.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {flats?.find(f => f.id === request.flat_id)?.flat_number} • {request.category}
-                            </p>
+              <Link to="/service-requests" className="block">
+                <Card className="stat-card border-0 hover:scale-[1.02] transition-transform cursor-pointer">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{language === 'bn' ? 'সার্ভিস অনুরোধ' : 'Service Requests'}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {userRequests?.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">{language === 'bn' ? 'কোনো অনুরোধ নেই' : 'No service requests'}</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {userRequests?.slice(0, 5).map(request => (
+                          <div key={request.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div>
+                              <p className="font-medium text-sm">{request.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {flats?.find(f => f.id === request.flat_id)?.flat_number} • {request.category}
+                              </p>
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              request.status === 'open' ? 'bg-warning/10 text-warning' :
+                              request.status === 'in-progress' ? 'bg-primary/10 text-primary' :
+                              'bg-success/10 text-success'
+                            }`}>
+                              {request.status}
+                            </span>
                           </div>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            request.status === 'open' ? 'bg-warning/10 text-warning' :
-                            request.status === 'in-progress' ? 'bg-primary/10 text-primary' :
-                            'bg-success/10 text-success'
-                          }`}>
-                            {request.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
             </>
           )}
         </div>
