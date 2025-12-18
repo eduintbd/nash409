@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { OwnerPaymentChart } from '@/components/dashboard/OwnerPaymentChart';
 import { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { t, language } = useLanguage();
@@ -431,26 +432,76 @@ const Dashboard = () => {
   const tenantOccupiedCount = flats?.filter(f => f.status === 'tenant').length || 0;
   const vacantCount = flats?.filter(f => f.status === 'vacant').length || 0;
 
+  // Card link mapping
+  const cardLinks: Record<string, string> = {
+    'property-overview': '/flats',
+    'pending-payments': '/invoices',
+    'service-requests': '/service-requests',
+    'total-income': '/invoices',
+    'total-expenses': '/expenses',
+  };
+
   // Build admin card content map
   const getAdminCardContent = (card: DashboardCard): ReactNode => {
+    const wrapWithLink = (content: ReactNode, cardId: string) => {
+      const link = cardLinks[cardId];
+      if (link) {
+        return (
+          <Link to={link} className="block h-full hover:scale-[1.02] transition-transform">
+            {content}
+          </Link>
+        );
+      }
+      return content;
+    };
+
     switch (card.id) {
       case 'property-overview':
-        return (
+        return wrapWithLink(
           <PropertyOverviewCard
             totalFlats={flats?.length || 0}
             ownerOccupied={ownerOccupiedCount}
             tenantOccupied={tenantOccupiedCount}
             vacant={vacantCount}
             language={language}
-          />
+          />,
+          card.id
         );
       case 'pending-payments':
-        return <StatCard title={t.dashboard.pendingPayments} value={pendingPayments} icon={Receipt} variant="warning" />;
+        return wrapWithLink(
+          <Card className="stat-card border-0 bg-warning/5 h-full cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-warning" />
+                {t.dashboard.pendingPayments}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
+              <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {t.dashboard.invoicesPending}</p>
+            </CardContent>
+          </Card>,
+          card.id
+        );
       case 'service-requests':
-        return <StatCard title={t.dashboard.serviceRequests} value={openRequests} icon={Wrench} variant="destructive" />;
+        return wrapWithLink(
+          <Card className="stat-card border-0 bg-destructive/5 h-full cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-destructive" />
+                {t.dashboard.serviceRequests}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-destructive">{openRequests}</p>
+              <p className="text-sm text-muted-foreground mt-1">{language === 'bn' ? 'চলমান অনুরোধ' : 'Open requests'}</p>
+            </CardContent>
+          </Card>,
+          card.id
+        );
       case 'total-income':
-        return (
-          <Card className="stat-card border-0 bg-success/5 h-full">
+        return wrapWithLink(
+          <Card className="stat-card border-0 bg-success/5 h-full cursor-pointer">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-success" />
@@ -461,11 +512,12 @@ const Dashboard = () => {
               <p className="text-3xl font-bold text-success">{formatBDT(totalIncome)}</p>
               <p className="text-sm text-muted-foreground mt-1">{t.dashboard.fromPaidInvoices}</p>
             </CardContent>
-          </Card>
+          </Card>,
+          card.id
         );
       case 'total-expenses':
-        return (
-          <Card className="stat-card border-0 bg-destructive/5 h-full">
+        return wrapWithLink(
+          <Card className="stat-card border-0 bg-destructive/5 h-full cursor-pointer">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-destructive" />
@@ -476,22 +528,8 @@ const Dashboard = () => {
               <p className="text-3xl font-bold text-destructive">{formatBDT(totalExpenses)}</p>
               <p className="text-sm text-muted-foreground mt-1">{t.dashboard.allExpensesCombined}</p>
             </CardContent>
-          </Card>
-        );
-      case 'pending-amount':
-        return (
-          <Card className="stat-card border-0 bg-warning/5 h-full">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-warning" />
-                {t.dashboard.pendingAmount}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-warning">{formatBDT(pendingAmount)}</p>
-              <p className="text-sm text-muted-foreground mt-1">{pendingPayments} {t.dashboard.invoicesPending}</p>
-            </CardContent>
-          </Card>
+          </Card>,
+          card.id
         );
       default:
         if (card.type === 'custom') {

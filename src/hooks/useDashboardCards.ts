@@ -19,7 +19,6 @@ const DEFAULT_ADMIN_CARDS: DashboardCard[] = [
   { id: 'service-requests', title: 'Service Requests', titleBn: 'সার্ভিস অনুরোধ', type: 'stat', visible: true, order: 2, icon: 'Wrench', variant: 'destructive' },
   { id: 'total-income', title: 'Total Income', titleBn: 'মোট আয়', type: 'stat', visible: true, order: 3, icon: 'TrendingUp', variant: 'success' },
   { id: 'total-expenses', title: 'Total Expenses', titleBn: 'মোট খরচ', type: 'stat', visible: true, order: 4, icon: 'TrendingDown', variant: 'destructive' },
-  { id: 'pending-amount', title: 'Pending Amount', titleBn: 'বকেয়া পরিমাণ', type: 'stat', visible: true, order: 5, icon: 'Receipt', variant: 'warning' },
 ];
 
 const DEFAULT_OWNER_CARDS: DashboardCard[] = [
