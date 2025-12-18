@@ -214,6 +214,7 @@ const Dashboard = () => {
               onRemoveCard={ownerCards.removeCard}
               onUpdateCard={ownerCards.updateCard}
               onResetToDefaults={ownerCards.resetToDefaults}
+              onReorderCards={ownerCards.reorderCards}
             />
           }
         />
@@ -438,6 +439,7 @@ const Dashboard = () => {
             onRemoveCard={adminCards.removeCard}
             onUpdateCard={adminCards.updateCard}
             onResetToDefaults={adminCards.resetToDefaults}
+            onReorderCards={adminCards.reorderCards}
           />
         }
       />
