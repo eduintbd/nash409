@@ -14,10 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useFlats } from '@/hooks/useFlats';
-import { Building2, Loader2 } from 'lucide-react';
+import { Building2, Loader2, Mail } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Invalid email address');
@@ -40,6 +47,9 @@ const Auth = () => {
   const [signupRole, setSignupRole] = useState<SignupRole | ''>('');
   const [signupFlatId, setSignupFlatId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   // Get available flats for owner/tenant selection
   // Owners can select any flat (including rented ones they own)
@@ -82,6 +92,46 @@ const Auth = () => {
       });
     } else {
       toast({ title: language === 'bn' ? 'সফলভাবে লগইন হয়েছে' : 'Logged in successfully' });
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      emailSchema.parse(resetEmail);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast({ 
+          title: language === 'bn' ? 'ত্রুটি' : 'Error', 
+          description: err.errors[0].message, 
+          variant: 'destructive' 
+        });
+        return;
+      }
+    }
+
+    setIsResetting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/auth?reset=true`,
+    });
+    setIsResetting(false);
+
+    if (error) {
+      toast({ 
+        title: language === 'bn' ? 'ত্রুটি' : 'Error', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    } else {
+      toast({ 
+        title: language === 'bn' ? 'ইমেইল পাঠানো হয়েছে' : 'Email Sent',
+        description: language === 'bn' 
+          ? 'পাসওয়ার্ড রিসেট লিঙ্ক আপনার ইমেইলে পাঠানো হয়েছে' 
+          : 'Password reset link has been sent to your email',
+      });
+      setShowForgotPassword(false);
+      setResetEmail('');
     }
   };
 
@@ -210,6 +260,16 @@ const Auth = () => {
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {language === 'bn' ? 'লগইন' : 'Login'}
                 </Button>
+                
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    {language === 'bn' ? 'পাসওয়ার্ড ভুলে গেছেন?' : 'Forgot Password?'}
+                  </button>
+                </div>
               </form>
             </TabsContent>
             
@@ -323,6 +383,45 @@ const Auth = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              {language === 'bn' ? 'পাসওয়ার্ড রিসেট' : 'Reset Password'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'bn' 
+                ? 'আপনার ইমেইল ঠিকানা দিন। আমরা একটি রিসেট লিঙ্ক পাঠাব।' 
+                : 'Enter your email address. We will send you a reset link.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">{language === 'bn' ? 'ইমেইল' : 'Email'}</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="email@example.com"
+                required
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={() => setShowForgotPassword(false)}>
+                {language === 'bn' ? 'বাতিল' : 'Cancel'}
+              </Button>
+              <Button type="submit" disabled={isResetting}>
+                {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {language === 'bn' ? 'লিঙ্ক পাঠান' : 'Send Link'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
