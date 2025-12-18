@@ -11,6 +11,23 @@ import { DashboardCard } from '@/hooks/useDashboardCards';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface DashboardCustomizerProps {
   cards: DashboardCard[];
@@ -19,6 +36,7 @@ interface DashboardCustomizerProps {
   onRemoveCard: (id: string) => void;
   onUpdateCard: (id: string, updates: Partial<DashboardCard>) => void;
   onResetToDefaults: () => void;
+  onReorderCards: (startIndex: number, endIndex: number) => void;
 }
 
 const ICON_OPTIONS = [
@@ -44,6 +62,77 @@ const VARIANT_OPTIONS = [
   { value: 'destructive', label: 'Destructive (Red)' },
 ];
 
+interface SortableCardItemProps {
+  card: DashboardCard;
+  language: string;
+  onToggleVisibility: (id: string) => void;
+  onRemoveCard?: (id: string) => void;
+  isCustom?: boolean;
+}
+
+function SortableCardItem({ card, language, onToggleVisibility, onRemoveCard, isCustom }: SortableCardItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: card.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+    >
+      <div className="flex items-center gap-3">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <div>
+          <p className="font-medium text-sm">
+            {language === 'bn' ? card.titleBn || card.title : card.title}
+          </p>
+          {isCustom ? (
+            <p className="text-xs text-muted-foreground">
+              {language === 'bn' ? card.customValueBn || card.customValue : card.customValue}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground capitalize">{card.variant}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={card.visible}
+          onCheckedChange={() => onToggleVisibility(card.id)}
+        />
+        {isCustom && onRemoveCard && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive"
+            onClick={() => onRemoveCard(card.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function DashboardCustomizer({
   cards,
   onToggleVisibility,
@@ -51,6 +140,7 @@ export function DashboardCustomizer({
   onRemoveCard,
   onUpdateCard,
   onResetToDefaults,
+  onReorderCards,
 }: DashboardCustomizerProps) {
   const { language } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -80,6 +170,23 @@ export function DashboardCustomizer({
 
   const systemCards = cards.filter(c => c.type === 'stat');
   const customCards = cards.filter(c => c.type === 'custom');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = cards.findIndex(c => c.id === active.id);
+      const newIndex = cards.findIndex(c => c.id === over.id);
+      onReorderCards(oldIndex, newIndex);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -116,7 +223,7 @@ export function DashboardCustomizer({
               <div className="space-y-3">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="text-sm font-medium text-muted-foreground">
-                    {language === 'bn' ? 'সিস্টেম কার্ড' : 'System Cards'}
+                    {language === 'bn' ? 'কার্ড টেনে সাজান' : 'Drag to reorder cards'}
                   </h4>
                   <Button variant="ghost" size="sm" onClick={onResetToDefaults} className="gap-1 text-xs">
                     <RotateCcw className="h-3 w-3" />
@@ -124,66 +231,27 @@ export function DashboardCustomizer({
                   </Button>
                 </div>
                 
-                {systemCards.map((card) => (
-                  <div
-                    key={card.id}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={cards.map(c => c.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <div className="flex items-center gap-3">
-                      <GripVertical className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium text-sm">
-                          {language === 'bn' ? card.titleBn : card.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground capitalize">{card.variant}</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={card.visible}
-                      onCheckedChange={() => onToggleVisibility(card.id)}
-                    />
-                  </div>
-                ))}
-
-                {customCards.length > 0 && (
-                  <>
-                    <h4 className="text-sm font-medium text-muted-foreground mt-6 mb-2">
-                      {language === 'bn' ? 'কাস্টম কার্ড' : 'Custom Cards'}
-                    </h4>
-                    {customCards.map((card) => (
-                      <div
+                    {cards.map((card) => (
+                      <SortableCardItem
                         key={card.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium text-sm">
-                              {language === 'bn' ? card.titleBn || card.title : card.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {language === 'bn' ? card.customValueBn || card.customValue : card.customValue}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={card.visible}
-                            onCheckedChange={() => onToggleVisibility(card.id)}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => onRemoveCard(card.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                        card={card}
+                        language={language}
+                        onToggleVisibility={onToggleVisibility}
+                        onRemoveCard={card.type === 'custom' ? onRemoveCard : undefined}
+                        isCustom={card.type === 'custom'}
+                      />
                     ))}
-                  </>
-                )}
+                  </SortableContext>
+                </DndContext>
               </div>
             </ScrollArea>
           </TabsContent>
