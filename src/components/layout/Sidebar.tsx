@@ -1,41 +1,49 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
   Users,
   UserCog,
-  Receipt,
   Wallet,
   Wrench,
   Camera,
   Bot,
   Settings,
-  LogOut,
   UserCheck,
-  UserPlus,
   Menu,
-  X,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export function Sidebar() {
   const { t, language } = useLanguage();
   const { isAdmin, isOwner, isTenant, userRole, user } = useAuth();
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+  
+  // Check if finance submenu should be open
+  const isFinanceActive = ['/invoices', '/expenses'].includes(location.pathname);
+  const [financeOpen, setFinanceOpen] = useState(isFinanceActive);
 
-  // Full navigation for admin
+  // Finance submenu items
+  const financeItems = [
+    { name: t.nav.invoices, href: '/invoices' },
+    { name: t.nav.expenses, href: '/expenses' },
+  ];
+
+  // Full navigation for admin (without separate invoices/expenses)
   const adminNavigation = [
     { name: t.nav.dashboard, href: '/dashboard', icon: LayoutDashboard },
     { name: t.nav.flats, href: '/flats', icon: Building2 },
     { name: t.nav.residents, href: '/residents', icon: Users },
     { name: t.nav.employees, href: '/employees', icon: UserCog },
-    { name: t.nav.invoices, href: '/invoices', icon: Receipt },
-    { name: t.nav.expenses, href: '/expenses', icon: Wallet },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
     { name: t.nav.cameras, href: '/cameras', icon: Camera },
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
@@ -47,17 +55,14 @@ export function Sidebar() {
     { name: t.nav.dashboard, href: '/dashboard', icon: LayoutDashboard },
     { name: language === 'bn' ? 'আমার সম্পত্তি' : 'My Properties', href: '/my-properties', icon: Building2 },
     { name: language === 'bn' ? 'ভাড়াটিয়া অনুমোদন' : 'Tenant Approvals', href: '/tenant-approvals', icon: UserCheck },
-    { name: t.nav.invoices, href: '/invoices', icon: Receipt },
-    { name: t.nav.expenses, href: '/expenses', icon: Wallet },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
     { name: t.nav.cameras, href: '/cameras', icon: Camera },
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
   ];
 
-  // Minimal navigation for tenants
+  // Minimal navigation for tenants (no finance submenu, just invoices inline)
   const tenantNavigation = [
     { name: t.nav.dashboard, href: '/dashboard', icon: LayoutDashboard },
-    { name: t.nav.invoices, href: '/invoices', icon: Receipt },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
   ];
@@ -67,6 +72,11 @@ export function Sidebar() {
     : isOwner 
       ? ownerNavigation 
       : tenantNavigation;
+
+  // Check if user can see finance submenu (admin, owner, or user role)
+  const showFinanceSubmenu = isAdmin || isOwner || userRole === 'user';
+  // Tenants only see invoices
+  const showTenantInvoices = isTenant && !isOwner && !isAdmin;
 
   const getRoleLabel = () => {
     if (isAdmin) return 'Admin';
@@ -113,6 +123,66 @@ export function Sidebar() {
             <span className="text-sm font-medium">{item.name}</span>
           </NavLink>
         ))}
+
+        {/* Finance Submenu for Admin/Owner */}
+        {showFinanceSubmenu && (
+          <Collapsible open={financeOpen} onOpenChange={setFinanceOpen}>
+            <CollapsibleTrigger asChild>
+              <button
+                className={cn(
+                  'nav-item w-full justify-between',
+                  isFinanceActive && 'active'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Wallet className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">
+                    {language === 'bn' ? 'অর্থ' : 'Finance'}
+                  </span>
+                </div>
+                {financeOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 mt-1 space-y-1">
+              {financeItems.map((item) => (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      'nav-item pl-6',
+                      isActive && 'active'
+                    )
+                  }
+                >
+                  <span className="text-sm font-medium">{item.name}</span>
+                </NavLink>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Tenant-only Invoices link */}
+        {showTenantInvoices && (
+          <NavLink
+            to="/invoices"
+            onClick={() => setOpen(false)}
+            className={({ isActive }) =>
+              cn(
+                'nav-item',
+                isActive && 'active'
+              )
+            }
+          >
+            <Wallet className="h-5 w-5 flex-shrink-0" />
+            <span className="text-sm font-medium">{t.nav.invoices}</span>
+          </NavLink>
+        )}
       </nav>
 
       {/* Bottom section */}
