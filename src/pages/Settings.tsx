@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -14,10 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, Bell, Shield, Palette, Database, Mail, Languages } from 'lucide-react';
+import { Building2, Bell, Shield, Database, MessageSquare, CreditCard, Languages } from 'lucide-react';
+import { WhatsAppIntegrationDialog } from '@/components/settings/WhatsAppIntegrationDialog';
+import { PaymentGatewayDialog } from '@/components/settings/PaymentGatewayDialog';
 
 const Settings = () => {
   const { language, setLanguage, t } = useLanguage();
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
   return (
     <MainLayout>
@@ -174,7 +179,7 @@ const Settings = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 rounded-lg border">
               <div className="flex items-center gap-3">
-                <Mail className="h-8 w-8 text-muted-foreground" />
+                <MessageSquare className="h-8 w-8 text-green-600" />
                 <div>
                   <p className="font-medium">{language === 'bn' ? 'হোয়াটসঅ্যাপ বিজনেস' : 'WhatsApp Business'}</p>
                   <p className="text-sm text-muted-foreground">
@@ -182,11 +187,13 @@ const Settings = () => {
                   </p>
                 </div>
               </div>
-              <Button variant="outline">{language === 'bn' ? 'সংযুক্ত করুন' : 'Connect'}</Button>
+              <Button variant="outline" onClick={() => setWhatsappDialogOpen(true)}>
+                {language === 'bn' ? 'সংযুক্ত করুন' : 'Connect'}
+              </Button>
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg border">
               <div className="flex items-center gap-3">
-                <Palette className="h-8 w-8 text-muted-foreground" />
+                <CreditCard className="h-8 w-8 text-primary" />
                 <div>
                   <p className="font-medium">{language === 'bn' ? 'পেমেন্ট গেটওয়ে' : 'Payment Gateway'}</p>
                   <p className="text-sm text-muted-foreground">
@@ -194,11 +201,23 @@ const Settings = () => {
                   </p>
                 </div>
               </div>
-              <Button variant="outline">{language === 'bn' ? 'কনফিগার' : 'Configure'}</Button>
+              <Button variant="outline" onClick={() => setPaymentDialogOpen(true)}>
+                {language === 'bn' ? 'কনফিগার' : 'Configure'}
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Integration Dialogs */}
+      <WhatsAppIntegrationDialog 
+        open={whatsappDialogOpen} 
+        onOpenChange={setWhatsappDialogOpen} 
+      />
+      <PaymentGatewayDialog 
+        open={paymentDialogOpen} 
+        onOpenChange={setPaymentDialogOpen} 
+      />
     </MainLayout>
   );
 };
