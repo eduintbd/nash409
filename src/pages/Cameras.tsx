@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Camera, Wifi, WifiOff, ExternalLink, Plus, Trash2, Copy, Monitor, Smartphone, Play } from 'lucide-react';
+import { Camera, Wifi, WifiOff, Plus, Trash2, Copy, Monitor, Smartphone, Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -39,6 +39,8 @@ const Cameras = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [newCamera, setNewCamera] = useState({ name: '', location: '', camera_id: '' });
+  const [testingConnection, setTestingConnection] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<Record<string, 'success' | 'failed' | null>>({});
 
   const onlineCount = cameras?.filter(c => c.status === 'online').length || 0;
 
@@ -64,6 +66,47 @@ const Cameras = () => {
     if (deleteId) {
       await deleteCamera.mutateAsync(deleteId);
       setDeleteId(null);
+    }
+  };
+
+  const testConnection = async (cameraId: string, ip: string) => {
+    setTestingConnection(cameraId);
+    setConnectionStatus(prev => ({ ...prev, [cameraId]: null }));
+    
+    try {
+      // Create a controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      // Try to fetch the camera's web interface
+      // We use mode: 'no-cors' because camera web interfaces don't support CORS
+      // This will throw if the connection times out or fails
+      await fetch(`http://${ip}`, { 
+        mode: 'no-cors',
+        signal: controller.signal 
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // If we get here, the request was sent (no-cors doesn't let us see the response)
+      setConnectionStatus(prev => ({ ...prev, [cameraId]: 'success' }));
+      toast({
+        title: language === 'bn' ? 'সংযোগ সফল' : 'Connection Successful',
+        description: language === 'bn' 
+          ? `ক্যামেরা ${ip} এ সাড়া দিচ্ছে` 
+          : `Camera at ${ip} is responding`,
+      });
+    } catch (error) {
+      setConnectionStatus(prev => ({ ...prev, [cameraId]: 'failed' }));
+      toast({
+        title: language === 'bn' ? 'সংযোগ ব্যর্থ' : 'Connection Failed',
+        description: language === 'bn' 
+          ? `ক্যামেরা ${ip} এ পৌঁছানো যাচ্ছে না। নেটওয়ার্ক চেক করুন।` 
+          : `Cannot reach camera at ${ip}. Check your network connection.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setTestingConnection(null);
     }
   };
 
@@ -256,43 +299,61 @@ const Cameras = () => {
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-3 gap-1 md:gap-2">
+                  <div className="grid grid-cols-4 gap-1 md:gap-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="w-full text-xs md:text-sm px-2 md:px-3"
+                      className="w-full text-xs md:text-sm px-1 md:px-3"
+                      disabled={!camera.camera_id || testingConnection === camera.id}
+                      onClick={() => camera.camera_id && testConnection(camera.id, camera.camera_id)}
+                    >
+                      {testingConnection === camera.id ? (
+                        <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
+                      ) : connectionStatus[camera.id] === 'success' ? (
+                        <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-success" />
+                      ) : connectionStatus[camera.id] === 'failed' ? (
+                        <XCircle className="h-3 w-3 md:h-4 md:w-4 text-destructive" />
+                      ) : (
+                        <Wifi className="h-3 w-3 md:h-4 md:w-4" />
+                      )}
+                      <span className="hidden md:inline ml-2">{language === 'bn' ? 'টেস্ট' : 'Test'}</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full text-xs md:text-sm px-1 md:px-3"
                       disabled={!camera.camera_id || camera.status === 'offline'}
                       onClick={() => camera.camera_id && openCameraWeb(camera.camera_id)}
                     >
-                      <Monitor className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                      <span className="hidden md:inline">{language === 'bn' ? 'ওয়েব' : 'Web'}</span>
+                      <Monitor className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden md:inline ml-2">{language === 'bn' ? 'ওয়েব' : 'Web'}</span>
                     </Button>
                     <Button 
                       variant="default" 
                       size="sm" 
-                      className="w-full text-xs md:text-sm px-2 md:px-3"
+                      className="w-full text-xs md:text-sm px-1 md:px-3"
                       disabled={!camera.camera_id || camera.status === 'offline'}
                       onClick={() => camera.camera_id && openInVLC(camera.camera_id, camera.name)}
                     >
-                      <Play className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                      <span className="hidden md:inline">VLC</span>
+                      <Play className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden md:inline ml-2">VLC</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="w-full text-xs md:text-sm px-2 md:px-3"
+                      className="w-full text-xs md:text-sm px-1 md:px-3"
                       disabled={!camera.camera_id}
                       onClick={() => camera.camera_id && copyToClipboard(camera.camera_id)}
                     >
-                      <Smartphone className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                      <span className="hidden md:inline">{language === 'bn' ? 'অ্যাপ' : 'App'}</span>
+                      <Smartphone className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="hidden md:inline ml-2">{language === 'bn' ? 'অ্যাপ' : 'App'}</span>
                     </Button>
                   </div>
                   
                   <p className="text-xs text-muted-foreground text-center">
                     {language === 'bn' 
-                      ? 'VLC তে RTSP URL পেস্ট করুন অথবা V380 Pro অ্যাপ ব্যবহার করুন'
-                      : 'Paste RTSP URL in VLC or use V380 Pro app'}
+                      ? 'টেস্ট বাটনে ক্লিক করে সংযোগ যাচাই করুন, তারপর VLC তে দেখুন'
+                      : 'Click Test to verify connection, then view in VLC'}
                   </p>
                 </CardContent>
               </Card>
