@@ -23,6 +23,7 @@ import MyTenant from "./pages/MyTenant";
 import MyProperties from "./pages/MyProperties";
 import TenantAgreement from "./pages/TenantAgreement";
 import Landing from "./pages/Landing";
+import SmartBuilding from "./pages/SmartBuilding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/requests" element={<ServiceRequests />} />
               <Route path="/service-requests" element={<ServiceRequests />} />
               <Route path="/cameras" element={<Cameras />} />
+              <Route path="/smart-building" element={<SmartBuilding />} />
               <Route path="/assistant" element={<AIAssistant />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/tenant-agreement/:token" element={<TenantAgreement />} />
