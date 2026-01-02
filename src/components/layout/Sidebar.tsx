@@ -14,6 +14,7 @@ import {
   Menu,
   ChevronDown,
   ChevronRight,
+  Gauge,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -45,6 +46,7 @@ export function Sidebar() {
     { name: t.nav.residents, href: '/residents', icon: Users },
     { name: t.nav.employees, href: '/employees', icon: UserCog },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
+    { name: language === 'bn' ? 'স্মার্ট বিল্ডিং' : 'Smart Building', href: '/smart-building', icon: Gauge },
     { name: t.nav.cameras, href: '/cameras', icon: Camera },
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
     { name: language === 'bn' ? 'ব্যবহারকারী অনুমোদন' : 'User Approvals', href: '/user-approvals', icon: UserCheck },

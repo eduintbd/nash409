@@ -3,7 +3,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Zap, Droplets, Flame, TrendingUp } from 'lucide-react';
 import { generateDailyReadings, generateMonthlyReadings, COST_PER_UNIT } from '@/lib/simulatedData';
-import { formatCurrency } from '@/lib/currency';
+import { formatBDT } from '@/lib/currency';
 import { useMemo } from 'react';
 
 export const EnergyDashboard = () => {
@@ -57,7 +57,7 @@ export const EnergyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{monthTotals.electricity.toLocaleString()} kWh</div>
-            <p className="text-sm text-muted-foreground">{formatCurrency(monthCosts.electricity)}</p>
+            <p className="text-sm text-muted-foreground">{formatBDT(monthCosts.electricity)}</p>
           </CardContent>
         </Card>
 
@@ -70,7 +70,7 @@ export const EnergyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{monthTotals.water.toFixed(0)} m³</div>
-            <p className="text-sm text-muted-foreground">{formatCurrency(monthCosts.water)}</p>
+            <p className="text-sm text-muted-foreground">{formatBDT(monthCosts.water)}</p>
           </CardContent>
         </Card>
 
@@ -83,7 +83,7 @@ export const EnergyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{monthTotals.gas.toFixed(0)} m³</div>
-            <p className="text-sm text-muted-foreground">{formatCurrency(monthCosts.gas)}</p>
+            <p className="text-sm text-muted-foreground">{formatBDT(monthCosts.gas)}</p>
           </CardContent>
         </Card>
 
@@ -95,7 +95,7 @@ export const EnergyDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalCost)}</div>
+            <div className="text-2xl font-bold">{formatBDT(totalCost)}</div>
             <p className="text-sm text-muted-foreground">All utilities combined</p>
           </CardContent>
         </Card>
@@ -124,7 +124,7 @@ export const EnergyDashboard = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatBDT(Number(value))} />} />
               </PieChart>
             </ChartContainer>
           </CardContent>

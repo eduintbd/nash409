@@ -5,7 +5,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 import { Droplets, AlertTriangle } from 'lucide-react';
 import { generateDailyReadings, generateMonthlyReadings, COST_PER_UNIT } from '@/lib/simulatedData';
-import { formatCurrency } from '@/lib/currency';
+import { formatBDT } from '@/lib/currency';
 import { useMemo } from 'react';
 
 export const WaterMonitor = () => {
@@ -77,7 +77,7 @@ export const WaterMonitor = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(monthCost)}</div>
+            <div className="text-2xl font-bold">{formatBDT(monthCost)}</div>
             <p className="text-sm text-muted-foreground">@ {COST_PER_UNIT.water} BDT/m³</p>
           </CardContent>
         </Card>

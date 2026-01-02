@@ -5,7 +5,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Zap, TrendingUp, TrendingDown } from 'lucide-react';
 import { generateDailyReadings, generateMonthlyReadings, COST_PER_UNIT } from '@/lib/simulatedData';
-import { formatCurrency } from '@/lib/currency';
+import { formatBDT } from '@/lib/currency';
 import { useMemo } from 'react';
 
 export const ElectricityMonitor = () => {
@@ -58,7 +58,7 @@ export const ElectricityMonitor = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(monthCost)}</div>
+            <div className="text-2xl font-bold">{formatBDT(monthCost)}</div>
             <p className="text-sm text-muted-foreground">@ {COST_PER_UNIT.electricity} BDT/kWh</p>
           </CardContent>
         </Card>
@@ -134,7 +134,7 @@ export const ElectricityMonitor = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" tickFormatter={(v) => v.slice(5)} fontSize={12} />
                   <YAxis fontSize={12} tickFormatter={(v) => `৳${v}`} />
-                  <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />} />
+                  <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatBDT(Number(value))} />} />
                   <Area type="monotone" dataKey="electricityCost" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.3} />
                 </AreaChart>
               </ChartContainer>
