@@ -240,6 +240,59 @@ export type Database = {
           },
         ]
       }
+      maintenance_schedules: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          equipment_name: string
+          equipment_type: string
+          frequency_days: number
+          id: string
+          last_maintenance_date: string | null
+          location: string | null
+          next_maintenance_date: string
+          notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          equipment_name: string
+          equipment_type: string
+          frequency_days?: number
+          id?: string
+          last_maintenance_date?: string | null
+          location?: string | null
+          next_maintenance_date: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          equipment_name?: string
+          equipment_type?: string
+          frequency_days?: number
+          id?: string
+          last_maintenance_date?: string | null
+          location?: string | null
+          next_maintenance_date?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_schedules_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_flats: {
         Row: {
           created_at: string
@@ -543,6 +596,97 @@ export type Database = {
           },
         ]
       }
+      smart_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          description: string | null
+          flat_id: string | null
+          id: string
+          is_resolved: boolean
+          resolved_at: string | null
+          severity: string
+          title: string
+          utility_type: string | null
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          description?: string | null
+          flat_id?: string | null
+          id?: string
+          is_resolved?: boolean
+          resolved_at?: string | null
+          severity?: string
+          title: string
+          utility_type?: string | null
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          description?: string | null
+          flat_id?: string | null
+          id?: string
+          is_resolved?: boolean
+          resolved_at?: string | null
+          severity?: string
+          title?: string
+          utility_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_alerts_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temperature_readings: {
+        Row: {
+          created_at: string
+          flat_id: string | null
+          humidity: number | null
+          hvac_mode: string | null
+          id: string
+          location: string
+          reading_time: string
+          target_temperature: number | null
+          temperature: number
+        }
+        Insert: {
+          created_at?: string
+          flat_id?: string | null
+          humidity?: number | null
+          hvac_mode?: string | null
+          id?: string
+          location?: string
+          reading_time?: string
+          target_temperature?: number | null
+          temperature: number
+        }
+        Update: {
+          created_at?: string
+          flat_id?: string | null
+          humidity?: number | null
+          hvac_mode?: string | null
+          id?: string
+          location?: string
+          reading_time?: string
+          target_temperature?: number | null
+          temperature?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temperature_readings_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           agreement_agreed_at: string | null
@@ -704,6 +848,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "utility_bills_flat_id_fkey"
+            columns: ["flat_id"]
+            isOneToOne: false
+            referencedRelation: "flats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      utility_readings: {
+        Row: {
+          cost_per_unit: number
+          created_at: string
+          flat_id: string | null
+          id: string
+          is_building_wide: boolean
+          reading_date: string
+          reading_value: number
+          unit: string
+          utility_type: string
+        }
+        Insert: {
+          cost_per_unit?: number
+          created_at?: string
+          flat_id?: string | null
+          id?: string
+          is_building_wide?: boolean
+          reading_date?: string
+          reading_value?: number
+          unit?: string
+          utility_type: string
+        }
+        Update: {
+          cost_per_unit?: number
+          created_at?: string
+          flat_id?: string | null
+          id?: string
+          is_building_wide?: boolean
+          reading_date?: string
+          reading_value?: number
+          unit?: string
+          utility_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "utility_readings_flat_id_fkey"
             columns: ["flat_id"]
             isOneToOne: false
             referencedRelation: "flats"
