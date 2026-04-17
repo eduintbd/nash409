@@ -29,57 +29,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
-
 const CameraStream = ({ ip, name }: { ip: string; name: string }) => {
-  const [loadError, setLoadError] = useState(false);
-
-  if (isSecure) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-4 bg-black text-white">
-        <Camera className="h-10 w-10 text-green-400" />
-        <p className="text-sm font-medium text-center">{name}</p>
-        <p className="text-xs text-gray-400 text-center">
-          {ip}
-        </p>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => window.open(`http://${ip}`, '_blank', 'noopener')}
-        >
-          <Play className="h-4 w-4 mr-2" />
-          Open Live Stream
-        </Button>
-        <p className="text-[10px] text-gray-500 text-center max-w-[200px]">
-          HTTPS blocks local camera feeds. Click above to open in a new tab.
-        </p>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4 bg-black text-white">
-        <Camera className="h-8 w-8 text-yellow-400" />
-        <p className="text-xs text-gray-400 text-center">Camera web UI not available</p>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => { setLoadError(false); }}
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <iframe
       src={`http://${ip}`}
       className="w-full h-full border-0 bg-black"
       title={name}
       sandbox="allow-same-origin allow-scripts allow-forms"
-      onError={() => setLoadError(true)}
+      allow="camera; microphone"
     />
   );
 };
@@ -219,29 +176,12 @@ const Cameras = () => {
           </div>
         </div>
 
-        {/* Info Banner */}
-        <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-          <div className="flex items-start gap-3">
-            <Camera className="h-5 w-5 text-primary mt-0.5" />
-            <div className="flex-1">
-              <h3 className="font-medium text-foreground">{t.cameras.cameraIntegration}</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {isSecure
-                  ? (language === 'bn'
-                    ? 'HTTPS সাইটে লোকাল ক্যামেরা সরাসরি এম্বেড করা যায় না। "Open Live Stream" বাটনে ক্লিক করে নতুন ট্যাবে দেখুন, অথবা VLC দিয়ে RTSP স্ট্রিম দেখুন।'
-                    : 'Local cameras cannot be embedded on HTTPS. Click "Open Live Stream" to view in a new tab, or use VLC for RTSP streaming.')
-                  : (language === 'bn'
-                    ? 'ক্যামেরার লাইভ ফিড নীচে দেখানো হচ্ছে। ফুলস্ক্রিন দেখতে বোতাম ক্লিক করুন।'
-                    : 'Live camera feeds are shown below. Click the fullscreen button to expand.')}
-              </p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                <Button size="sm" onClick={() => setFormOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t.common.add} {t.cameras.title}
-                </Button>
-              </div>
-            </div>
-          </div>
+        {/* Actions */}
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t.common.add} {t.cameras.title}
+          </Button>
         </div>
 
         {/* Camera Grid */}
@@ -255,11 +195,11 @@ const Cameras = () => {
             <p>{t.cameras.noCameras}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {cameras?.map((camera) => (
               <Card key={camera.id} className="stat-card border-0 overflow-hidden">
-                {/* Camera Preview */}
-                <div className="aspect-video bg-black relative overflow-hidden">
+                {/* Camera Stream - Large View */}
+                <div className="h-[70vh] bg-black relative overflow-hidden">
                   {camera.status === 'online' && camera.camera_id ? (
                     <CameraStream ip={camera.camera_id} name={camera.name} />
                   ) : camera.status === 'online' ? (
@@ -434,21 +374,13 @@ const Cameras = () => {
             </Button>
           </div>
           <div className="flex-1">
-            {isSecure ? (
-              <iframe
-                src={`http://${fullscreenCam.ip}`}
-                className="w-full h-full border-0"
-                title={fullscreenCam.name}
-                sandbox="allow-same-origin allow-scripts allow-forms"
-              />
-            ) : (
-              <iframe
-                src={`http://${fullscreenCam.ip}`}
-                className="w-full h-full border-0"
-                title={fullscreenCam.name}
-                sandbox="allow-same-origin allow-scripts allow-forms"
-              />
-            )}
+            <iframe
+              src={`http://${fullscreenCam.ip}`}
+              className="w-full h-full border-0"
+              title={fullscreenCam.name}
+              sandbox="allow-same-origin allow-scripts allow-forms"
+              allow="camera; microphone"
+            />
           </div>
         </div>
       )}
