@@ -21,9 +21,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    if (import.meta.env.DEV) {
-      console.error(`ErrorBoundary[${this.props.scope ?? "root"}]`, error, info);
-    }
+    console.error(`ErrorBoundary[${this.props.scope ?? "root"}]`, error, info);
   }
 
   private handleReset = () => {
@@ -43,9 +41,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
         <h2 className="text-lg font-semibold">Something went wrong</h2>
         <p className="max-w-md text-sm text-muted-foreground">
-          {import.meta.env.DEV
-            ? this.state.error.message
-            : "An unexpected error occurred while rendering this section."}
+          {this.state.error.message}
         </p>
         <Button onClick={this.handleReset} variant="outline" size="sm">
           Try again
