@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface Expense {
   id: string;
@@ -22,12 +23,16 @@ export interface ExpenseCategory {
 }
 
 export const useExpenses = () => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['expenses'],
+    queryKey: ['expenses', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('expenses')
         .select('*, expense_categories(name)')
+        .eq('building_id', currentBuildingId)
         .order('date', { ascending: false });
       if (error) throw error;
       return data;
@@ -36,12 +41,16 @@ export const useExpenses = () => {
 };
 
 export const useExpenseCategories = () => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['expense_categories'],
+    queryKey: ['expense_categories', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('expense_categories')
         .select('*')
+        .eq('building_id', currentBuildingId)
         .order('name');
       if (error) throw error;
       return data as ExpenseCategory[];
@@ -51,12 +60,14 @@ export const useExpenseCategories = () => {
 
 export const useCreateExpense = () => {
   const queryClient = useQueryClient();
-  
+  const { currentBuildingId } = useBuilding();
+
   return useMutation({
     mutationFn: async (expense: Omit<Expense, 'id' | 'created_at' | 'updated_at'>) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const { data, error } = await supabase
         .from('expenses')
-        .insert(expense)
+        .insert({ ...expense, building_id: currentBuildingId })
         .select()
         .single();
       if (error) throw error;

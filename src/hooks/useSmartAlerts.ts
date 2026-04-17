@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface SmartAlert {
   id: string;
@@ -18,15 +19,19 @@ export interface SmartAlert {
 export const useSmartAlerts = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentBuildingId } = useBuilding();
 
   const { data: alerts = [], isLoading, error } = useQuery({
-    queryKey: ['smart_alerts'],
+    queryKey: ['smart_alerts', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('smart_alerts')
         .select('*')
+        .eq('building_id', currentBuildingId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data as SmartAlert[];
     },
@@ -55,12 +60,13 @@ export const useSmartAlerts = () => {
 
   const addAlert = useMutation({
     mutationFn: async (alert: Omit<SmartAlert, 'id' | 'created_at' | 'resolved_at' | 'is_resolved'>) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const { data, error } = await supabase
         .from('smart_alerts')
-        .insert([alert])
+        .insert([{ ...alert, building_id: currentBuildingId }])
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },

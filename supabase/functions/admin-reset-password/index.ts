@@ -1,15 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { buildCorsHeaders, assertOriginAllowed } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIp } from "../_shared/rate_limit.ts";
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const originDenied = assertOriginAllowed(req);
+  if (originDenied) return originDenied;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -56,6 +57,29 @@ serve(async (req) => {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Cap each admin to 20 resets/hour to blunt a compromised-admin blast.
+    const { checkRateLimit } = await import("../_shared/rate_limit.ts");
+    const rl = await checkRateLimit(
+      supabaseAdmin as never,
+      "admin-reset-password",
+      `admin:${requestingUser.id}`,
+      20,
+      60,
+    );
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded" }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(rl.retryAfterSeconds),
+          },
+        },
+      );
     }
 
     const { userId, newPassword } = await req.json();

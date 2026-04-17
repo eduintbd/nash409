@@ -145,7 +145,7 @@ export default function MyProperties() {
       setShowAddDialog(false);
       setNewFlatData({ flat_number: '', building_name: '', floor: 1, size: 1200, parking_spot: '', status: 'owner-occupied' });
     } catch (error) {
-      console.error('Error creating flat:', error);
+      if (import.meta.env.DEV) console.error('Error creating flat:', error);
     }
   };
 

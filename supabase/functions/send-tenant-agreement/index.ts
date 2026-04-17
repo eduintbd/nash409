@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { buildCorsHeaders, assertOriginAllowed } from "../_shared/cors.ts";
 
 interface TenantAgreementRequest {
   tenantId: string;
@@ -22,11 +18,13 @@ interface TenantAgreementRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("send-tenant-agreement function called");
-  
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const originDenied = assertOriginAllowed(req);
+  if (originDenied) return originDenied;
 
   try {
     const data: TenantAgreementRequest = await req.json();
@@ -42,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get the app URL from the request origin or use a default
-    const origin = req.headers.get("origin") || "https://mouycggqqbievsjwsdgc.lovableproject.com";
+    const origin = req.headers.get("origin") || "https://mhvqsliseynhntmwpbwn.lovableproject.com";
     const agreementLink = `${origin}/tenant-agreement/${data.agreementToken}`;
     const signupLink = `${origin}/auth`;
 

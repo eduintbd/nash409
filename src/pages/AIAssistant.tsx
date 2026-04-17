@@ -167,7 +167,7 @@ const AIAssistant = () => {
 
       // Handle remaining buffer
       if (textBuffer.trim()) {
-        for (let raw of textBuffer.split('\n')) {
+        for (const raw of textBuffer.split('\n')) {
           if (!raw || raw.startsWith(':') || !raw.startsWith('data: ')) continue;
           const jsonStr = raw.slice(6).trim();
           if (jsonStr === '[DONE]') continue;
@@ -186,7 +186,7 @@ const AIAssistant = () => {
         }
       }
     } catch (error) {
-      console.error('AI Assistant error:', error);
+      if (import.meta.env.DEV) console.error('AI Assistant error:', error);
       toast.error('Failed to get response. Please try again.');
       // Remove the empty assistant message if error
       setMessages(prev => prev.filter(m => m.content !== ''));

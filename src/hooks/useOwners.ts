@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface Owner {
   id: string;
@@ -17,12 +18,16 @@ export interface Owner {
 }
 
 export const useOwners = () => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['owners'],
+    queryKey: ['owners', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('owners')
         .select('*, flats(flat_number)')
+        .eq('building_id', currentBuildingId)
         .order('name');
       if (error) throw error;
       return data;
@@ -32,7 +37,8 @@ export const useOwners = () => {
 
 export const useCreateOwner = () => {
   const queryClient = useQueryClient();
-  
+  const { currentBuildingId } = useBuilding();
+
   return useMutation({
     mutationFn: async (owner: Omit<Owner, 'id' | 'created_at' | 'updated_at' | 'owner_number'> & { 
       flat_ids?: string[]; 
@@ -45,8 +51,9 @@ export const useCreateOwner = () => {
         start_floor: number;
       } | null;
     }) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const { flat_ids, flat_occupancy, new_property, ...ownerData } = owner;
-      
+
       let finalFlatIds = flat_ids || [];
       let finalFlatOccupancy = flat_occupancy || {};
       
@@ -73,6 +80,7 @@ export const useCreateOwner = () => {
               flat_number: flatNumber,
               floor: floor,
               building_name: new_property.building_name,
+              building_id: currentBuildingId,
               size: 1200,
               status: status as 'owner-occupied' | 'tenant' | 'vacant',
             })
@@ -90,7 +98,7 @@ export const useCreateOwner = () => {
       
       const { data, error } = await supabase
         .from('owners')
-        .insert(ownerData)
+        .insert({ ...ownerData, building_id: currentBuildingId })
         .select()
         .single();
       if (error) throw error;

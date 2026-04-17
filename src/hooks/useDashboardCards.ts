@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { safeStorage } from '@/lib/safeStorage';
 
 export interface DashboardCard {
   id: string;
@@ -41,7 +42,7 @@ export function useDashboardCards(role: 'admin' | 'owner' | 'tenant') {
   const defaultCards = role === 'admin' ? DEFAULT_ADMIN_CARDS : role === 'owner' ? DEFAULT_OWNER_CARDS : DEFAULT_TENANT_CARDS;
 
   const [cards, setCards] = useState<DashboardCard[]>(() => {
-    const stored = localStorage.getItem(storageKey);
+    const stored = safeStorage.getItem(storageKey);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -66,7 +67,7 @@ export function useDashboardCards(role: 'admin' | 'owner' | 'tenant') {
   });
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(cards));
+    safeStorage.setItem(storageKey, JSON.stringify(cards));
   }, [cards, storageKey]);
 
   const updateCard = (id: string, updates: Partial<DashboardCard>) => {
@@ -106,7 +107,7 @@ export function useDashboardCards(role: 'admin' | 'owner' | 'tenant') {
 
   const resetToDefaults = () => {
     setCards(defaultCards);
-    localStorage.removeItem(storageKey);
+    safeStorage.removeItem(storageKey);
   };
 
   const visibleCards = cards.filter(c => c.visible).sort((a, b) => a.order - b.order);

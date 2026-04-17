@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import { translations, Language } from '@/lib/translations';
+import { safeStorage } from '@/lib/safeStorage';
 
 interface LanguageContextType {
   language: Language;
@@ -11,13 +12,13 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('app-language');
+    const saved = safeStorage.getItem('app-language');
     return (saved as Language) || 'bn';
   });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('app-language', lang);
+    safeStorage.setItem('app-language', lang);
   };
 
   const t = translations[language];

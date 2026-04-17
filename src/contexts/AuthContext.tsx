@@ -1,8 +1,18 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = 'admin' | 'user' | 'owner' | 'tenant';
+export type BuildingRole = Database['public']['Enums']['building_role'];
+
+export interface BuildingMembership {
+  buildingId: string;
+  role: BuildingRole;
+  flatId: string | null;
+  isApproved: boolean;
+  isPrimary: boolean;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -16,6 +26,7 @@ interface AuthContextType {
   userFlatId: string | null;
   userFlatIds: string[]; // Multiple flats for owners
   ownerId: string | null; // Owner record ID
+  buildingMemberships: BuildingMembership[];
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -37,6 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userFlatId, setUserFlatId] = useState<string | null>(null);
   const [userFlatIds, setUserFlatIds] = useState<string[]>([]);
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [buildingMemberships, setBuildingMemberships] = useState<BuildingMembership[]>([]);
 
   const checkUserRole = async (userId: string, email: string | undefined) => {
     setIsRoleLoading(true);
@@ -139,6 +151,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsOwner(role === 'owner');
       setIsTenant(role === 'tenant');
       setUserFlatId(flatId);
+
+      // Load building memberships (new multi-building layer).
+      const { data: memberships } = await supabase
+        .from('building_members')
+        .select('building_id, role, flat_id, is_approved, is_primary')
+        .eq('user_id', userId);
+
+      setBuildingMemberships(
+        (memberships ?? []).map((m) => ({
+          buildingId: m.building_id,
+          role: m.role,
+          flatId: m.flat_id,
+          isApproved: m.is_approved,
+          isPrimary: m.is_primary,
+        })),
+      );
     } finally {
       setIsRoleLoading(false);
     }
@@ -164,6 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUserFlatId(null);
           setUserFlatIds([]);
           setOwnerId(null);
+          setBuildingMemberships([]);
           setIsRoleLoading(false);
         }
       }
@@ -215,6 +244,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUserFlatId(null);
     setUserFlatIds([]);
     setOwnerId(null);
+    setBuildingMemberships([]);
 
     if (error) throw error;
   };
@@ -226,9 +256,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
+    <AuthContext.Provider value={{
       user, session, isLoading, isAdmin, isOwner, isTenant, isApproved, userRole, userFlatId, userFlatIds, ownerId,
-      signIn, signUp, signOut, refreshUserRole 
+      buildingMemberships,
+      signIn, signUp, signOut, refreshUserRole
     }}>
       {children}
     </AuthContext.Provider>

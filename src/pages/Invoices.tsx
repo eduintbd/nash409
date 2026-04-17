@@ -27,7 +27,19 @@ import {
 } from '@/components/ui/select';
 import { InvoiceForm } from '@/components/forms/InvoiceForm';
 import { ManualInvoiceForm } from '@/components/forms/ManualInvoiceForm';
-import { Search, Plus, FileText, MoreHorizontal, Check, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, FileText, MoreHorizontal, Check, Pencil, Trash2, Download, Loader2, Wallet } from 'lucide-react';
+import { useDownloadRentReceipt } from '@/hooks/useInvoiceReceipt';
+import { useSubmitPaymentIntent, type PaymentMethod } from '@/hooks/usePaymentIntents';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
 import {
@@ -62,6 +74,30 @@ const Invoices = () => {
   const { data: flats } = useFlats();
   const updateInvoice = useUpdateInvoice();
   const deleteInvoice = useDeleteInvoice();
+  const downloadReceipt = useDownloadRentReceipt();
+  const submitPayment = useSubmitPaymentIntent();
+  const [payIntentInvoice, setPayIntentInvoice] = useState<any>(null);
+  const [paymentForm, setPaymentForm] = useState({
+    method: 'bkash' as PaymentMethod,
+    reference: '',
+    payer_phone: '',
+    notes: '',
+  });
+
+  const handleDownloadReceipt = (invoiceId: string) => {
+    downloadReceipt.mutate(
+      { invoiceId },
+      {
+        onError: (err) => {
+          toast({
+            title: language === 'bn' ? 'ত্রুটি' : 'Error',
+            description: err instanceof Error ? err.message : 'Failed to generate receipt',
+            variant: 'destructive',
+          });
+        },
+      },
+    );
+  };
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -273,7 +309,7 @@ const Invoices = () => {
                           {statusLabels[invoice.status as keyof typeof statusLabels]}
                         </Badge>
                       </TableCell>
-                      {(isAdmin || isOwner) && (
+                      {(isAdmin || isOwner || isTenant) && (
                         <TableCell className="text-right">
                           {isAdmin ? (
                             <DropdownMenu>
@@ -289,11 +325,24 @@ const Invoices = () => {
                                     {language === 'bn' ? 'অনুমোদন করুন' : 'Approve'}
                                   </DropdownMenuItem>
                                 )}
+                                {invoice.status === 'paid' && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleDownloadReceipt(invoice.id)}
+                                    disabled={downloadReceipt.isPending}
+                                  >
+                                    {downloadReceipt.isPending ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Download className="h-4 w-4 mr-2" />
+                                    )}
+                                    {language === 'bn' ? 'রসিদ ডাউনলোড' : 'Download receipt'}
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem onClick={() => setEditInvoice(invoice)}>
                                   <Pencil className="h-4 w-4 mr-2" />
                                   {language === 'bn' ? 'সম্পাদনা' : 'Edit'}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => confirmDelete(invoice.id)}
                                   className="text-destructive focus:text-destructive"
                                 >
@@ -303,21 +352,52 @@ const Invoices = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           ) : (
-                            // Owner view - only record payment
-                            invoice.status !== 'paid' && canRecordPayment(invoice.flat_id) ? (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleRecordPayment(invoice)}
-                                disabled={updateInvoice.isPending}
-                              >
-                                {t.invoices.recordPayment}
-                              </Button>
-                            ) : invoice.status === 'paid' ? (
-                              <span className="text-xs text-muted-foreground">
-                                {invoice.paid_date && new Date(invoice.paid_date).toLocaleDateString(locale)}
-                              </span>
-                            ) : null
+                            <div className="flex gap-1 justify-end">
+                              {invoice.status !== 'paid' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setPayIntentInvoice(invoice);
+                                    setPaymentForm({
+                                      method: 'bkash',
+                                      reference: '',
+                                      payer_phone: '',
+                                      notes: '',
+                                    });
+                                  }}
+                                >
+                                  <Wallet className="h-4 w-4 mr-1" />
+                                  {language === 'bn' ? 'আমি পরিশোধ করেছি' : 'I paid'}
+                                </Button>
+                              )}
+                              {isOwner && invoice.status !== 'paid' && canRecordPayment(invoice.flat_id) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRecordPayment(invoice)}
+                                  disabled={updateInvoice.isPending}
+                                >
+                                  {t.invoices.recordPayment}
+                                </Button>
+                              )}
+                              {invoice.status === 'paid' && (
+                                <>
+                                  <span className="text-xs text-muted-foreground self-center">
+                                    {invoice.paid_date && new Date(invoice.paid_date).toLocaleDateString(locale)}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDownloadReceipt(invoice.id)}
+                                    disabled={downloadReceipt.isPending}
+                                    title={language === 'bn' ? 'রসিদ' : 'Receipt'}
+                                  >
+                                    <Download className="h-4 w-4" aria-hidden="true" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           )}
                         </TableCell>
                       )}
@@ -329,6 +409,118 @@ const Invoices = () => {
           )}
         </div>
       </div>
+
+      {/* Payment submission dialog (tenant / owner submits an intent; committee approves) */}
+      <Dialog
+        open={!!payIntentInvoice}
+        onOpenChange={(v) => !v && setPayIntentInvoice(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'bn' ? 'পেমেন্ট জমা দিন' : 'Submit payment'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'bn'
+                ? 'আপনার পেমেন্টের বিবরণ দিন। কমিটি যাচাই করে অনুমোদন করবে।'
+                : "Enter your payment details. The committee will verify and approve."}
+            </DialogDescription>
+          </DialogHeader>
+          {payIntentInvoice && (
+            <div className="space-y-3">
+              <div className="rounded-md bg-muted/40 p-3 text-sm flex justify-between">
+                <span className="text-muted-foreground">
+                  {payIntentInvoice.month} {payIntentInvoice.year}
+                </span>
+                <span className="font-semibold">{formatBDT(payIntentInvoice.amount)}</span>
+              </div>
+              <div>
+                <Label>{language === 'bn' ? 'পদ্ধতি' : 'Method'}</Label>
+                <Select
+                  value={paymentForm.method}
+                  onValueChange={(v) =>
+                    setPaymentForm((f) => ({ ...f, method: v as PaymentMethod }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bkash">bKash</SelectItem>
+                    <SelectItem value="nagad">Nagad</SelectItem>
+                    <SelectItem value="rocket">Rocket</SelectItem>
+                    <SelectItem value="bank">Bank</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>{language === 'bn' ? 'ট্রানজেকশন রেফারেন্স' : 'Transaction reference'}</Label>
+                <Input
+                  placeholder="TrxID / bank ref"
+                  value={paymentForm.reference}
+                  onChange={(e) => setPaymentForm((f) => ({ ...f, reference: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>{language === 'bn' ? 'ফোন (যে নম্বর থেকে পাঠানো হয়েছে)' : 'Sender phone'}</Label>
+                <Input
+                  placeholder="01XXXXXXXXX"
+                  value={paymentForm.payer_phone}
+                  onChange={(e) => setPaymentForm((f) => ({ ...f, payer_phone: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>{language === 'bn' ? 'নোট' : 'Notes'}</Label>
+                <Input
+                  value={paymentForm.notes}
+                  onChange={(e) => setPaymentForm((f) => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayIntentInvoice(null)}>
+              {language === 'bn' ? 'বাতিল' : 'Cancel'}
+            </Button>
+            <Button
+              disabled={submitPayment.isPending || !payIntentInvoice}
+              onClick={async () => {
+                if (!payIntentInvoice) return;
+                try {
+                  await submitPayment.mutateAsync({
+                    invoice_id: payIntentInvoice.id,
+                    amount: Number(payIntentInvoice.amount),
+                    method: paymentForm.method,
+                    reference: paymentForm.reference || undefined,
+                    payer_phone: paymentForm.payer_phone || undefined,
+                    notes: paymentForm.notes || undefined,
+                  });
+                  toast({
+                    title: language === 'bn' ? 'জমা দেওয়া হয়েছে' : 'Submitted',
+                    description:
+                      language === 'bn'
+                        ? 'কমিটির অনুমোদনের অপেক্ষায়।'
+                        : 'Awaiting committee approval.',
+                  });
+                  setPayIntentInvoice(null);
+                } catch (err) {
+                  toast({
+                    title: language === 'bn' ? 'ত্রুটি' : 'Error',
+                    description: err instanceof Error ? err.message : String(err),
+                    variant: 'destructive',
+                  });
+                }
+              }}
+            >
+              {submitPayment.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {language === 'bn' ? 'জমা দিন' : 'Submit'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <InvoiceForm open={formOpen} onOpenChange={setFormOpen} />
       <ManualInvoiceForm 

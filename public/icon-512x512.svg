@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="80" fill="#10b981"/>
+  <text x="256" y="190" text-anchor="middle" font-family="system-ui, sans-serif" font-size="76" font-weight="700" fill="white">NASH</text>
+  <text x="256" y="275" text-anchor="middle" font-family="system-ui, sans-serif" font-size="52" font-weight="400" fill="white" opacity="0.9">MS</text>
+  <rect x="100" y="310" width="312" height="3" rx="1.5" fill="white" opacity="0.3"/>
+  <text x="256" y="380" text-anchor="middle" font-family="system-ui, sans-serif" font-size="32" fill="white" opacity="0.7">Building Manager</text>
+</svg>

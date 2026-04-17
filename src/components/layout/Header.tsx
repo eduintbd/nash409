@@ -2,6 +2,7 @@ import { Bell, Search, LogOut, User, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { BuildingSwitcher } from '@/components/layout/BuildingSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -64,9 +65,12 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
           />
         </div>
         
+        {/* Building Switcher — hidden when user only has one building */}
+        <BuildingSwitcher />
+
         {/* Language Switcher */}
         <LanguageSwitcher />
-        
+
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-9 lg:w-9">
           <Bell className="h-4 w-4 lg:h-5 lg:w-5" />

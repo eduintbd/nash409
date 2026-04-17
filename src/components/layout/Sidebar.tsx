@@ -15,6 +15,10 @@ import {
   ChevronDown,
   ChevronRight,
   Gauge,
+  Fuel,
+  CalendarClock,
+  ShieldCheck,
+  UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -47,6 +51,11 @@ export function Sidebar() {
     { name: t.nav.employees, href: '/employees', icon: UserCog },
     { name: t.nav.serviceRequests, href: '/requests', icon: Wrench },
     { name: language === 'bn' ? 'স্মার্ট বিল্ডিং' : 'Smart Building', href: '/smart-building', icon: Gauge },
+    { name: language === 'bn' ? 'জেনারেটর রান' : 'Generator runs', href: '/generator-runs', icon: Fuel },
+    { name: language === 'bn' ? 'কর্মী শিডিউল' : 'Staff schedule', href: '/staff-schedule', icon: CalendarClock },
+    { name: language === 'bn' ? 'কমপ্লায়েন্স' : 'Compliance', href: '/compliance', icon: ShieldCheck },
+    { name: language === 'bn' ? 'পেমেন্ট অনুমোদন' : 'Payment approvals', href: '/payment-approvals', icon: Wallet },
+    { name: language === 'bn' ? 'সদস্যতার অনুরোধ' : 'Member requests', href: '/member-requests', icon: UserPlus },
     { name: t.nav.cameras, href: '/cameras', icon: Camera },
     { name: t.nav.aiAssistant, href: '/assistant', icon: Bot },
     { name: language === 'bn' ? 'ব্যবহারকারী অনুমোদন' : 'User Approvals', href: '/user-approvals', icon: UserCheck },

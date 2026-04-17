@@ -86,7 +86,7 @@ export default function TenantAgreement() {
         .single();
 
       if (error || !tenantData) {
-        console.error('Error fetching tenant:', error);
+        if (import.meta.env.DEV) console.error('Error fetching tenant:', error);
         setLoading(false);
         return;
       }

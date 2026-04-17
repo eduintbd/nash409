@@ -25,6 +25,16 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { Check, X, Loader2, UserCheck, Users, Home } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import { z } from 'zod';
+
+const approveTenantSchema = z.object({
+  userId: z.string().uuid('Invalid user id'),
+  flatId: z.string().uuid('Invalid flat selection'),
+});
+
+const rejectTenantSchema = z.object({
+  userId: z.string().uuid('Invalid user id'),
+});
 
 interface PendingTenant {
   id: string;
@@ -123,17 +133,20 @@ const TenantApprovals = () => {
 
   // Approve tenant mutation
   const approveMutation = useMutation({
-    mutationFn: async ({ userId, flatId }: { userId: string; flatId: string }) => {
+    mutationFn: async (input: { userId: string; flatId: string }) => {
+      const { userId, flatId } = approveTenantSchema.parse(input);
       // Verify the owner owns this flat
       if (!ownerFlatIds.includes(flatId)) {
         throw new Error('You do not own this flat');
       }
 
+      if (!user?.id) throw new Error('Not authenticated');
+
       // Get owner record for approved_by_owner_id
       const { data: owner } = await supabase
         .from('owners')
         .select('id')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .single();
 
       // Get profile data
@@ -195,9 +208,10 @@ const TenantApprovals = () => {
     },
   });
 
-  // Reject tenant mutation  
+  // Reject tenant mutation
   const rejectMutation = useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async (rawUserId: string) => {
+      const { userId } = rejectTenantSchema.parse({ userId: rawUserId });
       const { error } = await supabase
         .from('user_roles')
         .delete()

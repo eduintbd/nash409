@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 interface PropertyDocument {
   id: string;
@@ -15,18 +17,22 @@ interface PropertyDocument {
 }
 
 export const usePropertyDocuments = (buildingName?: string) => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['property-documents', buildingName],
+    queryKey: ['property-documents', currentBuildingId, buildingName],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       let query = supabase
         .from('property_documents')
         .select('*')
+        .eq('building_id', currentBuildingId)
         .order('created_at', { ascending: false });
-      
+
       if (buildingName) {
         query = query.eq('building_name', buildingName);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data as PropertyDocument[];
@@ -36,6 +42,7 @@ export const usePropertyDocuments = (buildingName?: string) => {
 
 export const useUploadPropertyDocument = () => {
   const queryClient = useQueryClient();
+  const { currentBuildingId } = useBuilding();
 
   return useMutation({
     mutationFn: async ({
@@ -49,6 +56,7 @@ export const useUploadPropertyDocument = () => {
       documentName: string;
       documentType: string;
     }) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const fileExt = file.name.split('.').pop();
       const fileName = `${buildingName}/${Date.now()}-${documentName}.${fileExt}`;
 
@@ -67,6 +75,7 @@ export const useUploadPropertyDocument = () => {
         .from('property_documents')
         .insert({
           building_name: buildingName,
+          building_id: currentBuildingId,
           document_name: documentName,
           document_type: documentType,
           file_path: fileName,
@@ -85,7 +94,7 @@ export const useUploadPropertyDocument = () => {
     },
     onError: (error) => {
       toast.error('Failed to upload document');
-      console.error(error);
+      logger.error(error);
     },
   });
 };
@@ -116,7 +125,7 @@ export const useDeletePropertyDocument = () => {
     },
     onError: (error) => {
       toast.error('Failed to delete document');
-      console.error(error);
+      logger.error(error);
     },
   });
 };

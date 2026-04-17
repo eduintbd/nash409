@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#10b981"/>
+  <text x="256" y="230" text-anchor="middle" font-family="system-ui, sans-serif" font-size="76" font-weight="700" fill="white">NASH</text>
+  <text x="256" y="310" text-anchor="middle" font-family="system-ui, sans-serif" font-size="52" font-weight="400" fill="white" opacity="0.9">MS</text>
+</svg>

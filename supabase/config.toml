@@ -1,19 +1,26 @@
-project_id = "mouycggqqbievsjwsdgc"
+project_id = "mhvqsliseynhntmwpbwn"
 
-[functions.send-tenant-agreement]
-verify_jwt = false
-
-[functions.generate-monthly-rent]
-verify_jwt = false
-
+# Anonymous (user is not logged in when requesting a reset).
 [functions.send-password-reset]
 verify_jwt = false
 
+# Anonymous (token, not JWT, is the credential).
 [functions.verify-reset-token]
 verify_jwt = false
 
+# Authenticated-user endpoints — block unauthenticated callers at the gateway.
+[functions.send-tenant-agreement]
+verify_jwt = true
+
 [functions.admin-reset-password]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-welcome-email]
-verify_jwt = false
+verify_jwt = true
+
+[functions.ai-assistant]
+verify_jwt = true
+
+# Triggered by the scheduled cron with a service-role JWT.
+[functions.generate-monthly-rent]
+verify_jwt = true

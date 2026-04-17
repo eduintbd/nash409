@@ -36,9 +36,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { 
-  Search, Building2, User, Phone, Mail, Car, BarChart3, Shield, FolderOpen
+import {
+  Search, Building2, User, Phone, Mail, Car, BarChart3, Shield, FolderOpen, Receipt,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBDT } from '@/lib/currency';
 import FlatForm from '@/components/forms/FlatForm';
@@ -305,9 +306,16 @@ const Flats = () => {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" onClick={() => setSelectedFlat(flat)}>
-                                {t.common.details}
-                              </Button>
+                              <div className="flex gap-1 justify-end">
+                                <Button asChild variant="ghost" size="sm" title={language === 'bn' ? 'লেজার' : 'Ledger'}>
+                                  <Link to={`/flats/${flat.id}/ledger`}>
+                                    <Receipt className="h-4 w-4" aria-hidden="true" />
+                                  </Link>
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => setSelectedFlat(flat)}>
+                                  {t.common.details}
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );

@@ -14,6 +14,7 @@ import { useEmployees } from '@/hooks/useEmployees';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBuilding } from '@/contexts/BuildingContext';
 import { useDashboardCards, DashboardCard } from '@/hooks/useDashboardCards';
 import { Wrench } from 'lucide-react';
 import { formatBDT } from '@/lib/currency';
@@ -26,14 +27,27 @@ import { Link } from 'react-router-dom';
 const Dashboard = () => {
   const { t, language } = useLanguage();
   const { isAdmin, isOwner, isTenant, userFlatId, userFlatIds } = useAuth();
+  const { currentRoles } = useBuilding();
   const { data: flats, isLoading: loadingFlats } = useFlats();
   const { data: invoices, isLoading: loadingInvoices } = useInvoices();
   const { data: requests, isLoading: loadingRequests } = useServiceRequests();
   const { data: employees, isLoading: loadingEmployees } = useEmployees();
   const { data: expenses, isLoading: loadingExpenses } = useExpenses();
-  
-  // Dashboard customization based on role
-  const role = isAdmin ? 'admin' : isOwner ? 'owner' : 'tenant';
+
+  // Derive the active dashboard variant. Building-scoped roles win over the
+  // legacy user_roles booleans so a user can be e.g. committee here and tenant
+  // in another building.
+  const role: 'admin' | 'owner' | 'tenant' = (() => {
+    if (currentRoles.includes('committee') || currentRoles.includes('manager')) return 'admin';
+    if (currentRoles.includes('landlord_owner') || currentRoles.includes('resident_owner')) return 'owner';
+    if (currentRoles.includes('tenant')) return 'tenant';
+    // Staff + vendor have no tailored dashboard yet — fall through to tenant layout
+    // (limited data view) until dedicated variants ship in a later phase.
+    if (currentRoles.includes('staff') || currentRoles.includes('vendor')) return 'tenant';
+    // Legacy fallback for users pre-dating building_members migration.
+    return isAdmin ? 'admin' : isOwner ? 'owner' : isTenant ? 'tenant' : 'tenant';
+  })();
+
   const dashboardCards = useDashboardCards(role);
 
   // Filter data based on role

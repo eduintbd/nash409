@@ -1,13 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { buildCorsHeaders, assertOriginAllowed } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIp } from "../_shared/rate_limit.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface PasswordResetRequest {
   email: string;
@@ -15,10 +12,13 @@ interface PasswordResetRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const originDenied = assertOriginAllowed(req);
+  if (originDenied) return originDenied;
 
   try {
     const { email, redirectUrl }: PasswordResetRequest = await req.json();
@@ -34,6 +34,24 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Rate limit by IP and by email (5 attempts per hour each).
+    const ip = getClientIp(req);
+    const ipLimit = await checkRateLimit(supabase as never, "send-password-reset", `ip:${ip}`, 5, 60);
+    const emailLimit = await checkRateLimit(supabase as never, "send-password-reset", `email:${email.toLowerCase()}`, 5, 60);
+    if (!ipLimit.allowed || !emailLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Too many reset attempts. Please try again later." }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(Math.max(ipLimit.retryAfterSeconds, emailLimit.retryAfterSeconds)),
+          },
+        }
+      );
+    }
 
     // Check if user exists
     const { data: users, error: userError } = await supabase.auth.admin.listUsers();

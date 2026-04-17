@@ -9,7 +9,7 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { user, isLoading, isApproved, userRole } = useAuth();
+  const { user, isLoading, isApproved, userRole, buildingMemberships } = useAuth();
 
   // Show loading while checking auth or role
   if (isLoading || (user && userRole === null)) {
@@ -25,9 +25,15 @@ export function MainLayout({ children }: MainLayoutProps) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect to pending approval page if not approved (after role check is complete)
-  if (userRole !== null && !isApproved) {
-    return <Navigate to="/pending-approval" replace />;
+  // Multi-building onboarding: a logged-in user with no approved membership is
+  // routed to /onboarding so they can create a building or request to join one.
+  const hasApprovedMembership = buildingMemberships.some((m) => m.isApproved);
+  if (!hasApprovedMembership) {
+    // Legacy pending-approval flow still applies if they have a pending user_roles row.
+    if (userRole !== null && !isApproved) {
+      return <Navigate to="/pending-approval" replace />;
+    }
+    return <Navigate to="/onboarding" replace />;
   }
 
   return (

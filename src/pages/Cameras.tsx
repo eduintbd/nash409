@@ -213,7 +213,9 @@ const Cameras = () => {
                       title={camera.name}
                       sandbox="allow-same-origin allow-scripts"
                       onError={(e) => {
-                        console.log('Iframe load error:', e);
+                        if (import.meta.env.DEV) {
+                          console.log('Iframe load error:', e);
+                        }
                       }}
                     />
                   ) : (

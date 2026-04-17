@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface MaintenanceSchedule {
   id: string;
@@ -20,15 +21,19 @@ export interface MaintenanceSchedule {
 export const useMaintenanceSchedules = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentBuildingId } = useBuilding();
 
   const { data: schedules = [], isLoading, error } = useQuery({
-    queryKey: ['maintenance_schedules'],
+    queryKey: ['maintenance_schedules', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('maintenance_schedules')
         .select('*')
+        .eq('building_id', currentBuildingId)
         .order('next_maintenance_date', { ascending: true });
-      
+
       if (error) throw error;
       return data as MaintenanceSchedule[];
     },
@@ -36,12 +41,13 @@ export const useMaintenanceSchedules = () => {
 
   const addSchedule = useMutation({
     mutationFn: async (schedule: Omit<MaintenanceSchedule, 'id' | 'created_at' | 'updated_at'>) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const { data, error } = await supabase
         .from('maintenance_schedules')
-        .insert([schedule])
+        .insert([{ ...schedule, building_id: currentBuildingId }])
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },

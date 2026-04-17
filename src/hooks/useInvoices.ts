@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface Invoice {
   id: string;
@@ -18,12 +19,16 @@ export interface Invoice {
 }
 
 export const useInvoices = () => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['invoices'],
+    queryKey: ['invoices', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('invoices')
         .select('*, flats(flat_number)')
+        .eq('building_id', currentBuildingId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -33,12 +38,14 @@ export const useInvoices = () => {
 
 export const useCreateInvoice = () => {
   const queryClient = useQueryClient();
-  
+  const { currentBuildingId } = useBuilding();
+
   return useMutation({
     mutationFn: async (invoice: Omit<Invoice, 'id' | 'created_at' | 'updated_at'>) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const { data, error } = await supabase
         .from('invoices')
-        .insert(invoice)
+        .insert({ ...invoice, building_id: currentBuildingId })
         .select()
         .single();
       if (error) throw error;
@@ -101,20 +108,24 @@ export const useDeleteInvoice = () => {
 
 export const useGenerateBulkInvoices = () => {
   const queryClient = useQueryClient();
-  
+  const { currentBuildingId } = useBuilding();
+
   return useMutation({
     mutationFn: async ({ month, year, amount, description }: { month: string; year: number; amount: number; description: string }) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       // Get ALL flats (including vacant) for service charge
       const { data: flats, error: flatsError } = await supabase
         .from('flats')
-        .select('id');
-      
+        .select('id')
+        .eq('building_id', currentBuildingId);
+
       if (flatsError) throw flatsError;
-      
+
       const dueDate = new Date(year, ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].indexOf(month) + 1, 10);
-      
+
       const invoices = flats.map(flat => ({
         flat_id: flat.id,
+        building_id: currentBuildingId,
         month,
         year,
         amount,
@@ -123,7 +134,7 @@ export const useGenerateBulkInvoices = () => {
         description,
         invoice_type: 'service_charge' as const,
       }));
-      
+
       const { error } = await supabase.from('invoices').insert(invoices);
       if (error) throw error;
     },

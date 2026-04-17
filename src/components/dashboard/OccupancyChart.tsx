@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { mockFlats } from '@/data/mockData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -8,7 +8,7 @@ const COLORS = {
   'vacant': 'hsl(210, 15%, 70%)',
 };
 
-export function OccupancyChart() {
+export const OccupancyChart = memo(function OccupancyChart() {
   const data = useMemo(() => {
     const counts = mockFlats.reduce((acc, flat) => {
       acc[flat.status] = (acc[flat.status] || 0) + 1;
@@ -66,4 +66,4 @@ export function OccupancyChart() {
       </div>
     </div>
   );
-}
+});

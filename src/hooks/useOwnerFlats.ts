@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface OwnerFlat {
   id: string;
@@ -11,12 +12,18 @@ export interface OwnerFlat {
 
 // Get all owner flats with owner and flat details (for admin view)
 export const useAllOwnerFlats = () => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['all-owner-flats'],
+    queryKey: ['all-owner-flats', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
+      // Filter via the owners.building_id join — owner_flats has no direct
+      // building_id column; scope is inherited from its owner record.
       const { data, error } = await supabase
         .from('owner_flats')
-        .select('*, flats(*), owners(id, name, phone, email, owner_number)')
+        .select('*, flats!inner(*), owners!inner(id, name, phone, email, owner_number, building_id)')
+        .eq('owners.building_id', currentBuildingId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;

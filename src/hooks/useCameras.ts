@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface Camera {
   id: string;
@@ -13,12 +14,16 @@ export interface Camera {
 }
 
 export const useCameras = () => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['cameras'],
+    queryKey: ['cameras', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('cameras')
         .select('*')
+        .eq('building_id', currentBuildingId)
         .order('name');
       if (error) throw error;
       return data as Camera[];
@@ -28,12 +33,14 @@ export const useCameras = () => {
 
 export const useCreateCamera = () => {
   const queryClient = useQueryClient();
-  
+  const { currentBuildingId } = useBuilding();
+
   return useMutation({
     mutationFn: async (camera: Omit<Camera, 'id' | 'created_at' | 'updated_at'>) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const { data, error } = await supabase
         .from('cameras')
-        .insert(camera)
+        .insert({ ...camera, building_id: currentBuildingId })
         .select()
         .single();
       if (error) throw error;

@@ -66,6 +66,9 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   }
 
   return (
+    // Invariant: `config` MUST be a typed ChartConfig object authored in code,
+    // never user-controlled input. Color/theme values flow straight into a <style> tag;
+    // accepting untrusted data here would enable CSS-injection / XSS.
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)

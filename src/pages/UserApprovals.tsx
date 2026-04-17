@@ -28,6 +28,19 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { Check, X, Loader2, UserCheck, Users, Edit, Key, Search } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import { z } from 'zod';
+
+const editProfileSchema = z.object({
+  full_name: z.string().trim().min(1, 'Full name is required').max(120),
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+});
+
+const resetPasswordSchema = z.object({
+  newPassword: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(72, 'Password must be 72 characters or fewer'),
+});
 
 interface PendingUser {
   id: string;
@@ -557,11 +570,23 @@ const UserApprovals = () => {
               {language === 'bn' ? 'বাতিল' : 'Cancel'}
             </Button>
             <Button
-              onClick={() => editingUser && updateProfileMutation.mutate({
-                userId: editingUser.user_id,
-                full_name: editForm.full_name,
-                email: editForm.email,
-              })}
+              onClick={() => {
+                if (!editingUser) return;
+                const parsed = editProfileSchema.safeParse(editForm);
+                if (!parsed.success) {
+                  toast({
+                    title: language === 'bn' ? 'ত্রুটি' : 'Error',
+                    description: parsed.error.issues[0]?.message ?? 'Invalid input',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                updateProfileMutation.mutate({
+                  userId: editingUser.user_id,
+                  full_name: parsed.data.full_name,
+                  email: parsed.data.email,
+                });
+              }}
               disabled={updateProfileMutation.isPending}
             >
               {updateProfileMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -601,10 +626,22 @@ const UserApprovals = () => {
               {language === 'bn' ? 'বাতিল' : 'Cancel'}
             </Button>
             <Button
-              onClick={() => resetPasswordUser && resetPasswordMutation.mutate({
-                userId: resetPasswordUser.user_id,
-                newPassword,
-              })}
+              onClick={() => {
+                if (!resetPasswordUser) return;
+                const parsed = resetPasswordSchema.safeParse({ newPassword });
+                if (!parsed.success) {
+                  toast({
+                    title: language === 'bn' ? 'ত্রুটি' : 'Error',
+                    description: parsed.error.issues[0]?.message ?? 'Invalid password',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                resetPasswordMutation.mutate({
+                  userId: resetPasswordUser.user_id,
+                  newPassword: parsed.data.newPassword,
+                });
+              }}
               disabled={resetPasswordMutation.isPending || newPassword.length < 6}
             >
               {resetPasswordMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

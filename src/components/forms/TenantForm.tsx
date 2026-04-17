@@ -21,8 +21,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCreateTenant, useUpdateTenant } from '@/hooks/useTenants';
 import { useFlats } from '@/hooks/useFlats';
 import { useOwners } from '@/hooks/useOwners';
+import {
+  useSendTenantAgreement,
+  useFetchAgreementToken,
+} from '@/hooks/useSendTenantAgreement';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Mail, Send } from 'lucide-react';
 
@@ -52,7 +55,9 @@ export const TenantForm = ({ open, onOpenChange, editData, preselectedFlatId }: 
   const { data: owners } = useOwners();
   const createTenant = useCreateTenant();
   const updateTenant = useUpdateTenant();
-  const [sendingEmail, setSendingEmail] = useState(false);
+  const sendAgreement = useSendTenantAgreement();
+  const fetchAgreementToken = useFetchAgreementToken();
+  const sendingEmail = sendAgreement.isPending;
   
   const [formData, setFormData] = useState({
     name: '',
@@ -110,44 +115,36 @@ export const TenantForm = ({ open, onOpenChange, editData, preselectedFlatId }: 
       return;
     }
 
-    setSendingEmail(true);
-    
-    const selectedFlat = flats?.find(f => f.id === formData.flat_id);
-    const selectedOwner = owners?.find(o => o.flat_id === formData.flat_id);
+    const selectedFlat = flats?.find((f) => f.id === formData.flat_id);
+    const selectedOwner = owners?.find((o) => o.flat_id === formData.flat_id);
 
     try {
-      const { error } = await supabase.functions.invoke('send-tenant-agreement', {
-        body: {
-          tenantId,
-          tenantEmail: formData.email,
-          tenantName: formData.name,
-          flatNumber: selectedFlat?.flat_number || '',
-          ownerName: selectedOwner?.name || 'N/A',
-          rentAmount: parseFloat(formData.rent_amount) || 0,
-          securityDeposit: parseFloat(formData.security_deposit) || 0,
-          houseRules: formData.house_rules,
-          maintenanceResponsibilities: formData.maintenance_responsibilities,
-          startDate: formData.start_date,
-          endDate: formData.end_date || null,
-          agreementToken,
-        },
+      await sendAgreement.mutateAsync({
+        tenantId,
+        tenantEmail: formData.email,
+        tenantName: formData.name,
+        flatNumber: selectedFlat?.flat_number || '',
+        ownerName: selectedOwner?.name || 'N/A',
+        rentAmount: parseFloat(formData.rent_amount) || 0,
+        securityDeposit: parseFloat(formData.security_deposit) || 0,
+        houseRules: formData.house_rules,
+        maintenanceResponsibilities: formData.maintenance_responsibilities,
+        startDate: formData.start_date,
+        endDate: formData.end_date || null,
+        agreementToken,
       });
-
-      if (error) throw error;
 
       toast({
         title: language === 'bn' ? 'চুক্তি পাঠানো হয়েছে' : 'Agreement Sent',
         description: language === 'bn' ? 'ভাড়াটিয়ার ইমেইলে চুক্তি পাঠানো হয়েছে' : 'Agreement has been sent to tenant email',
       });
-    } catch (error: any) {
-      console.error('Error sending agreement:', error);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       toast({
         title: language === 'bn' ? 'ত্রুটি' : 'Error',
-        description: error.message,
+        description: message,
         variant: 'destructive',
       });
-    } finally {
-      setSendingEmail(false);
     }
   };
 
@@ -172,36 +169,22 @@ export const TenantForm = ({ open, onOpenChange, editData, preselectedFlatId }: 
       if (editData) {
         await updateTenant.mutateAsync({ id: editData.id, ...data });
         if (sendEmail) {
-          // Fetch the agreement token for existing tenant
-          const { data: tenantData } = await supabase
-            .from('tenants')
-            .select('agreement_token')
-            .eq('id', editData.id)
-            .single();
-          
-          if (tenantData?.agreement_token) {
-            await sendAgreementEmail(editData.id, tenantData.agreement_token);
-          }
+          const token = await fetchAgreementToken.mutateAsync(editData.id);
+          if (token) await sendAgreementEmail(editData.id, token);
         }
       } else {
         const result = await createTenant.mutateAsync(data);
         if (sendEmail && result?.id) {
-          // Fetch the agreement token for newly created tenant
-          const { data: tenantData } = await supabase
-            .from('tenants')
-            .select('agreement_token')
-            .eq('id', result.id)
-            .single();
-          
-          if (tenantData?.agreement_token) {
-            await sendAgreementEmail(result.id, tenantData.agreement_token);
-          }
+          const token = await fetchAgreementToken.mutateAsync(result.id);
+          if (token) await sendAgreementEmail(result.id, token);
         }
       }
-      
+
       onOpenChange(false);
     } catch (error) {
-      console.error('Error saving tenant:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error saving tenant:', error);
+      }
     }
   };
 

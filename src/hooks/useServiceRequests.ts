@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface ServiceRequest {
   id: string;
@@ -21,12 +22,16 @@ export interface ServiceRequest {
 }
 
 export const useServiceRequests = () => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['service_requests'],
+    queryKey: ['service_requests', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('service_requests')
         .select('*, flats(flat_number), employees(name)')
+        .eq('building_id', currentBuildingId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -36,12 +41,14 @@ export const useServiceRequests = () => {
 
 export const useCreateServiceRequest = () => {
   const queryClient = useQueryClient();
-  
+  const { currentBuildingId } = useBuilding();
+
   return useMutation({
     mutationFn: async (request: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at' | 'ticket_number' | 'resolution_notes' | 'invoice_id'>) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const { data, error } = await supabase
         .from('service_requests')
-        .insert(request)
+        .insert({ ...request, building_id: currentBuildingId })
         .select()
         .single();
       if (error) throw error;

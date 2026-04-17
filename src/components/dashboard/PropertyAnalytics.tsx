@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -30,8 +30,7 @@ import { Building2, Home, Users, TrendingUp, Pencil, Trash2, ChevronDown, Chevro
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
+import { useUpdateProperty, useDeleteProperty } from '@/hooks/usePropertyAnalyticsMutations';
 import { toast } from '@/hooks/use-toast';
 
 interface Flat {
@@ -58,18 +57,19 @@ interface BuildingStats {
   flatNumbers: string[];
 }
 
-export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
+const PropertyAnalyticsInner = ({ flats }: PropertyAnalyticsProps) => {
   const { language } = useLanguage();
   const { isAdmin } = useAuth();
-  const queryClient = useQueryClient();
-  
+  const updatePropertyMutation = useUpdateProperty();
+  const deletePropertyMutation = useDeleteProperty();
+
   const [editProperty, setEditProperty] = useState<BuildingStats | null>(null);
   const [deleteProperty, setDeleteProperty] = useState<BuildingStats | null>(null);
   const [newPropertyName, setNewPropertyName] = useState('');
   const [newTotalUnits, setNewTotalUnits] = useState<number>(0);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
+  const isUpdating = updatePropertyMutation.isPending;
+  const isDeleting = deletePropertyMutation.isPending;
 
   const t = {
     title: language === 'bn' ? 'সম্পত্তি বিশ্লেষণ' : 'Property Analytics',
@@ -170,65 +170,23 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
 
   const handleUpdateProperty = async () => {
     if (!editProperty || !newPropertyName.trim()) return;
-    
-    setIsUpdating(true);
+
     try {
-      // Update existing flats with new building name
-      const { error: updateError } = await supabase
-        .from('flats')
-        .update({ building_name: newPropertyName.trim() })
-        .in('id', editProperty.flatIds);
-
-      if (updateError) throw updateError;
-
-      // If total units increased, add new flats
-      if (newTotalUnits > editProperty.totalFlats) {
-        const flatsToAdd = newTotalUnits - editProperty.totalFlats;
-        const existingNumbers = editProperty.flatNumbers.map(n => parseInt(n.replace(/\D/g, '')) || 0);
-        const maxNumber = Math.max(...existingNumbers, 0);
-        
-        const newFlats = [];
-        for (let i = 1; i <= flatsToAdd; i++) {
-          const newNumber = maxNumber + i;
-          newFlats.push({
-            flat_number: `${newNumber}`,
-            building_name: newPropertyName.trim(),
-            floor: Math.ceil(newNumber / 4),
-            size: 1200,
-            status: 'vacant' as const,
-          });
-        }
-        
-        const { error: insertError } = await supabase.from('flats').insert(newFlats);
-        if (insertError) throw insertError;
-      }
-      
-      // If total units decreased, remove vacant flats only
-      if (newTotalUnits < editProperty.totalFlats) {
-        const flatsToRemove = editProperty.totalFlats - newTotalUnits;
-        // Get only vacant flat IDs from this building
-        const { data: vacantFlats } = await supabase
-          .from('flats')
-          .select('id')
-          .eq('building_name', editProperty.name)
-          .eq('status', 'vacant')
-          .limit(flatsToRemove);
-        
-        if (vacantFlats && vacantFlats.length > 0) {
-          const idsToDelete = vacantFlats.map(f => f.id);
-          await supabase.from('flats').delete().in('id', idsToDelete);
-        }
-      }
-
+      await updatePropertyMutation.mutateAsync({
+        existingFlatIds: editProperty.flatIds,
+        existingFlatNumbers: editProperty.flatNumbers,
+        existingBuildingName: editProperty.name,
+        newBuildingName: newPropertyName,
+        currentTotalUnits: editProperty.totalFlats,
+        newTotalUnits,
+      });
       toast({ title: t.updateSuccess });
-      queryClient.invalidateQueries({ queryKey: ['flats'] });
       setEditProperty(null);
       setNewPropertyName('');
       setNewTotalUnits(0);
-    } catch (error: any) {
-      toast({ title: t.updateError, description: error.message, variant: 'destructive' });
-    } finally {
-      setIsUpdating(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({ title: t.updateError, description: message, variant: 'destructive' });
     }
   };
 
@@ -238,31 +196,21 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
 
   const handleDeleteProperty = async () => {
     if (!deleteProperty) return;
-    
-    // Check if there are occupied flats
+
     const occupiedCount = deleteProperty.ownerOccupied + deleteProperty.tenantOccupied;
     if (occupiedCount > 0) {
       toast({ title: t.cannotDeleteOccupied, variant: 'destructive' });
       setDeleteProperty(null);
       return;
     }
-    
-    setIsDeleting(true);
+
     try {
-      const { error } = await supabase
-        .from('flats')
-        .delete()
-        .in('id', deleteProperty.flatIds);
-
-      if (error) throw error;
-
+      await deletePropertyMutation.mutateAsync(deleteProperty.flatIds);
       toast({ title: t.deleteSuccess });
-      queryClient.invalidateQueries({ queryKey: ['flats'] });
       setDeleteProperty(null);
-    } catch (error: any) {
-      toast({ title: t.deleteError, description: error.message, variant: 'destructive' });
-    } finally {
-      setIsDeleting(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({ title: t.deleteError, description: message, variant: 'destructive' });
     }
   };
 
@@ -570,3 +518,5 @@ export const PropertyAnalytics = ({ flats }: PropertyAnalyticsProps) => {
     </div>
   );
 };
+
+export const PropertyAnalytics = memo(PropertyAnalyticsInner);

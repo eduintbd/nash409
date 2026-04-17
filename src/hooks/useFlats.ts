@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 export interface Flat {
   id: string;
@@ -16,12 +17,16 @@ export interface Flat {
 }
 
 export const useFlats = () => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['flats'],
+    queryKey: ['flats', currentBuildingId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       const { data, error } = await supabase
         .from('flats')
         .select('*')
+        .eq('building_id', currentBuildingId)
         .order('display_order')
         .order('building_name')
         .order('flat_number');
@@ -33,12 +38,14 @@ export const useFlats = () => {
 
 export const useCreateFlat = () => {
   const queryClient = useQueryClient();
-  
+  const { currentBuildingId } = useBuilding();
+
   return useMutation({
     mutationFn: async (flat: Omit<Flat, 'id' | 'created_at' | 'updated_at' | 'display_order'>) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const { data, error } = await supabase
         .from('flats')
-        .insert(flat)
+        .insert({ ...flat, building_id: currentBuildingId })
         .select()
         .single();
       if (error) throw error;

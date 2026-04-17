@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wallet } from 'lucide-react';
 import { formatBDT } from '@/lib/currency';
@@ -43,8 +44,8 @@ const CustomTooltip = ({ active, payload, language }: any) => {
   return null;
 };
 
-export function FinancialWaterfallChart({ 
-  data, 
+export const FinancialWaterfallChart = memo(function FinancialWaterfallChart({
+  data,
   language,
   title = 'Financial Summary',
   titleBn = 'আর্থিক সারসংক্ষেপ'
@@ -131,4 +132,4 @@ export function FinancialWaterfallChart({
       </CardContent>
     </Card>
   );
-}
+});

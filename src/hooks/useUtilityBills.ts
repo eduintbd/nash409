@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
+import { useBuilding } from '@/contexts/BuildingContext';
 
 interface UtilityBill {
   id: string;
@@ -22,19 +24,23 @@ interface UtilityBill {
 }
 
 export const useUtilityBills = (flatId?: string) => {
+  const { currentBuildingId } = useBuilding();
   return useQuery({
-    queryKey: ['utility-bills', flatId],
+    queryKey: ['utility-bills', currentBuildingId, flatId],
+    enabled: !!currentBuildingId,
     queryFn: async () => {
+      if (!currentBuildingId) return [];
       let query = supabase
         .from('utility_bills')
         .select('*, flats(flat_number, building_name)')
+        .eq('building_id', currentBuildingId)
         .order('bill_year', { ascending: false })
         .order('bill_month', { ascending: false });
-      
+
       if (flatId) {
         query = query.eq('flat_id', flatId);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data as UtilityBill[];
@@ -44,6 +50,7 @@ export const useUtilityBills = (flatId?: string) => {
 
 export const useUploadUtilityBill = () => {
   const queryClient = useQueryClient();
+  const { currentBuildingId } = useBuilding();
 
   return useMutation({
     mutationFn: async ({
@@ -63,6 +70,7 @@ export const useUploadUtilityBill = () => {
       amount: number;
       paidBy: string;
     }) => {
+      if (!currentBuildingId) throw new Error('No building selected');
       const fileExt = file.name.split('.').pop();
       const fileName = `${flatId}/${billYear}-${billMonth}-${billType}.${fileExt}`;
 
@@ -81,6 +89,7 @@ export const useUploadUtilityBill = () => {
         .from('utility_bills')
         .insert({
           flat_id: flatId,
+          building_id: currentBuildingId,
           bill_type: billType,
           bill_month: billMonth,
           bill_year: billYear,
@@ -102,7 +111,7 @@ export const useUploadUtilityBill = () => {
     },
     onError: (error) => {
       toast.error('Failed to upload utility bill');
-      console.error(error);
+      logger.error(error);
     },
   });
 };
@@ -133,7 +142,7 @@ export const useDeleteUtilityBill = () => {
     },
     onError: (error) => {
       toast.error('Failed to delete utility bill');
-      console.error(error);
+      logger.error(error);
     },
   });
 };

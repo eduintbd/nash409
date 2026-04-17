@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { buildCorsHeaders, assertOriginAllowed } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIp } from "../_shared/rate_limit.ts";
 
 interface VerifyTokenRequest {
   token: string;
@@ -12,10 +9,13 @@ interface VerifyTokenRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const originDenied = assertOriginAllowed(req);
+  if (originDenied) return originDenied;
 
   try {
     const { token, newPassword }: VerifyTokenRequest = await req.json();
@@ -38,6 +38,24 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Rate limit by IP (10/hour) and by token (5/hour — prevents brute-forcing a single token).
+    const ip = getClientIp(req);
+    const ipLimit = await checkRateLimit(supabase as never, "verify-reset-token", `ip:${ip}`, 10, 60);
+    const tokenLimit = await checkRateLimit(supabase as never, "verify-reset-token", `token:${token}`, 5, 60);
+    if (!ipLimit.allowed || !tokenLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Too many attempts. Please try again later." }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(Math.max(ipLimit.retryAfterSeconds, tokenLimit.retryAfterSeconds)),
+          },
+        }
+      );
+    }
 
     // Find the token
     const { data: resetToken, error: tokenError } = await supabase
