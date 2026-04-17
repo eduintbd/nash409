@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isRoleLoading: boolean;
   isAdmin: boolean;
   isOwner: boolean;
   isTenant: boolean;
@@ -257,7 +258,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{
-      user, session, isLoading, isAdmin, isOwner, isTenant, isApproved, userRole, userFlatId, userFlatIds, ownerId,
+      user, session, isLoading, isRoleLoading, isAdmin, isOwner, isTenant, isApproved, userRole, userFlatId, userFlatIds, ownerId,
       buildingMemberships,
       signIn, signUp, signOut, refreshUserRole
     }}>

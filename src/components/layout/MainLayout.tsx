@@ -9,10 +9,10 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { user, isLoading, isApproved, userRole, buildingMemberships } = useAuth();
+  const { user, isLoading, isRoleLoading, isAdmin, isApproved, userRole, buildingMemberships } = useAuth();
 
-  // Show loading while checking auth or role
-  if (isLoading || (user && userRole === null)) {
+  // Show loading while checking auth or role (including building memberships)
+  if (isLoading || isRoleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -25,15 +25,18 @@ export function MainLayout({ children }: MainLayoutProps) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Multi-building onboarding: a logged-in user with no approved membership is
-  // routed to /onboarding so they can create a building or request to join one.
-  const hasApprovedMembership = buildingMemberships.some((m) => m.isApproved);
-  if (!hasApprovedMembership) {
-    // Legacy pending-approval flow still applies if they have a pending user_roles row.
-    if (userRole !== null && !isApproved) {
-      return <Navigate to="/pending-approval" replace />;
+  // Admins bypass building membership requirements
+  if (!isAdmin) {
+    // Multi-building onboarding: a logged-in user with no approved membership is
+    // routed to /onboarding so they can create a building or request to join one.
+    const hasApprovedMembership = buildingMemberships.some((m) => m.isApproved);
+    if (!hasApprovedMembership) {
+      // Legacy pending-approval flow still applies if they have a pending user_roles row.
+      if (userRole !== null && !isApproved) {
+        return <Navigate to="/pending-approval" replace />;
+      }
+      return <Navigate to="/onboarding" replace />;
     }
-    return <Navigate to="/onboarding" replace />;
   }
 
   return (
