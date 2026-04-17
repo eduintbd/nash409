@@ -32,7 +32,7 @@ interface BuildingContextValue {
 const BuildingContext = createContext<BuildingContextValue | undefined>(undefined);
 
 export const BuildingProvider = ({ children }: { children: ReactNode }) => {
-  const { user, buildingMemberships, isAdmin } = useAuth();
+  const { user, buildingMemberships, isAdmin, isRoleLoading } = useAuth();
   const [currentBuildingId, setCurrentBuildingIdState] = useState<string | null>(() =>
     safeStorage.getItem(STORAGE_KEY),
   );
@@ -50,7 +50,7 @@ export const BuildingProvider = ({ children }: { children: ReactNode }) => {
   // Admins (global superadmin) can see every building; regular users only their memberships.
   const { data: availableBuildings = [], isLoading } = useQuery({
     queryKey: ['buildings', user?.id, isAdmin, memberBuildingIds],
-    enabled: !!user,
+    enabled: !!user && !isRoleLoading,
     queryFn: async (): Promise<BuildingSummary[]> => {
       let query = supabase
         .from('buildings')
