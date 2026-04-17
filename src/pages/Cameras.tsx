@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Camera, Wifi, WifiOff, Plus, Trash2, Copy, Monitor, Smartphone, Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Camera, Wifi, WifiOff, Plus, Trash2, Copy, Monitor, Smartphone, Play, Loader2, CheckCircle2, XCircle, Maximize2, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -41,6 +41,8 @@ const Cameras = () => {
   const [newCamera, setNewCamera] = useState({ name: '', location: '', camera_id: '' });
   const [testingConnection, setTestingConnection] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, 'success' | 'failed' | null>>({});
+  const [streamMode, setStreamMode] = useState<Record<string, 'snapshot' | 'mjpeg' | 'iframe'>>({});
+  const [snapshotKey, setSnapshotKey] = useState<Record<string, number>>({});
 
   const onlineCount = cameras?.filter(c => c.status === 'online').length || 0;
 
@@ -176,9 +178,9 @@ const Cameras = () => {
             <div className="flex-1">
               <h3 className="font-medium text-foreground">{t.cameras.cameraIntegration}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {language === 'bn' 
-                  ? 'আপনার V380 Pro ক্যামেরা দেখতে নীচের বিকল্পগুলি ব্যবহার করুন। ওয়েব ব্রাউজার সরাসরি RTSP স্ট্রিম দেখাতে পারে না।'
-                  : 'Use the options below to view your V380 Pro camera. Web browsers cannot directly display RTSP streams.'}
+                {language === 'bn'
+                  ? 'ক্যামেরা দেখতে Snapshot/MJPEG/Web UI মোড ব্যবহার করুন। HTTPS সাইটে লোকাল ক্যামেরা দেখতে হলে সরাসরি ক্যামেরার IP ব্রাউজারে খুলুন অথবা VLC ব্যবহার করুন।'
+                  : 'Use Snapshot/MJPEG/Web UI modes to view cameras. For local cameras on HTTPS sites, open the camera IP directly in a new tab or use VLC for RTSP streaming.'}
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <Button size="sm" onClick={() => setFormOpen(true)}>
@@ -204,21 +206,72 @@ const Cameras = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {cameras?.map((camera) => (
               <Card key={camera.id} className="stat-card border-0 overflow-hidden">
-                {/* Camera Preview - Try iframe embed */}
-                <div className="aspect-video bg-muted/30 relative">
-                  {camera.status === 'online' && camera.camera_id ? (
-                    <iframe
-                      src={`http://${camera.camera_id}`}
-                      className="w-full h-full border-0"
-                      title={camera.name}
-                      sandbox="allow-same-origin allow-scripts"
-                      onError={(e) => {
-                        if (import.meta.env.DEV) {
-                          console.log('Iframe load error:', e);
-                        }
-                      }}
-                    />
-                  ) : (
+                {/* Camera Preview */}
+                <div className="aspect-video bg-black relative">
+                  {camera.status === 'online' && camera.camera_id ? (() => {
+                    const mode = streamMode[camera.id] || 'snapshot';
+                    const ip = camera.camera_id;
+                    const snapshotUrls = [
+                      `http://${ip}/cgi-bin/snapshot.cgi`,
+                      `http://${ip}/snap.jpg`,
+                      `http://${ip}/snapshot.jpg`,
+                      `http://${ip}/capture`,
+                      `http://${ip}/image.jpg`,
+                    ];
+                    const mjpegUrls = [
+                      `http://${ip}/video.mjpg`,
+                      `http://${ip}/mjpeg/1`,
+                      `http://${ip}/cgi-bin/mjpeg`,
+                      `http://${ip}/videostream.cgi`,
+                      `http://${ip}:8080/video`,
+                    ];
+                    const ts = snapshotKey[camera.id] || 0;
+
+                    if (mode === 'iframe') {
+                      return (
+                        <iframe
+                          src={`http://${ip}`}
+                          className="w-full h-full border-0"
+                          title={camera.name}
+                          sandbox="allow-same-origin allow-scripts"
+                        />
+                      );
+                    }
+
+                    if (mode === 'mjpeg') {
+                      return (
+                        <img
+                          src={mjpegUrls[0]}
+                          alt={camera.name}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            const currentIdx = mjpegUrls.indexOf(target.src);
+                            if (currentIdx < mjpegUrls.length - 1) {
+                              target.src = mjpegUrls[currentIdx + 1];
+                            }
+                          }}
+                        />
+                      );
+                    }
+
+                    return (
+                      <img
+                        key={ts}
+                        src={`${snapshotUrls[0]}?t=${ts}`}
+                        alt={camera.name}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const baseUrl = target.src.split('?')[0];
+                          const currentIdx = snapshotUrls.indexOf(baseUrl);
+                          if (currentIdx < snapshotUrls.length - 1) {
+                            target.src = `${snapshotUrls[currentIdx + 1]}?t=${ts}`;
+                          }
+                        }}
+                      />
+                    );
+                  })() : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       {camera.status === 'online' ? (
                         <div className="text-center p-4">
@@ -235,11 +288,11 @@ const Cameras = () => {
                       )}
                     </div>
                   )}
-                  
-                  <Badge 
+
+                  <Badge
                     className={`absolute top-2 right-2 ${
-                      camera.status === 'online' 
-                        ? 'bg-success text-success-foreground' 
+                      camera.status === 'online'
+                        ? 'bg-success text-success-foreground'
                         : 'bg-destructive text-destructive-foreground'
                     }`}
                   >
@@ -249,14 +302,38 @@ const Cameras = () => {
                       <><WifiOff className="h-3 w-3 mr-1" /> {t.cameras.offline}</>
                     )}
                   </Badge>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute top-2 left-2 h-8 w-8 bg-background/80 hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setDeleteId(camera.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 bg-background/80 hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={() => setDeleteId(camera.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    {camera.status === 'online' && camera.camera_id && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 bg-background/80"
+                          onClick={() => setSnapshotKey(prev => ({ ...prev, [camera.id]: Date.now() }))}
+                          title={language === 'bn' ? 'রিফ্রেশ' : 'Refresh'}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 bg-background/80"
+                          onClick={() => window.open(`http://${camera.camera_id}`, '_blank')}
+                          title={language === 'bn' ? 'পূর্ণ স্ক্রিন' : 'Full screen'}
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 
                 <CardHeader className="pb-2">
@@ -274,6 +351,23 @@ const Cameras = () => {
                 </CardHeader>
                 
                 <CardContent className="space-y-3">
+                  {camera.camera_id && camera.status === 'online' && (
+                    <div className="flex gap-1">
+                      {(['snapshot', 'mjpeg', 'iframe'] as const).map((mode) => (
+                        <Button
+                          key={mode}
+                          variant={(streamMode[camera.id] || 'snapshot') === mode ? 'default' : 'outline'}
+                          size="sm"
+                          className="flex-1 text-xs"
+                          onClick={() => setStreamMode(prev => ({ ...prev, [camera.id]: mode }))}
+                        >
+                          {mode === 'snapshot' ? (language === 'bn' ? 'স্ন্যাপশট' : 'Snapshot')
+                            : mode === 'mjpeg' ? 'MJPEG'
+                            : (language === 'bn' ? 'ওয়েব UI' : 'Web UI')}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                   {camera.camera_id && (
                     <div className="p-3 rounded-lg bg-muted/50 space-y-2">
                       <div className="flex items-center justify-between">
