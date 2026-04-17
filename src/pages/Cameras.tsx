@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Camera, Wifi, WifiOff, Plus, Trash2, Copy, Monitor, Smartphone, Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Camera, Wifi, WifiOff, Plus, Trash2, Copy, Monitor, Smartphone, Play, Loader2, CheckCircle2, XCircle, Maximize2, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -29,19 +29,74 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+
+const CameraStream = ({ ip, name }: { ip: string; name: string }) => {
+  const [loadError, setLoadError] = useState(false);
+
+  if (isSecure) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-4 bg-black text-white">
+        <Camera className="h-10 w-10 text-green-400" />
+        <p className="text-sm font-medium text-center">{name}</p>
+        <p className="text-xs text-gray-400 text-center">
+          {ip}
+        </p>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => window.open(`http://${ip}`, '_blank', 'noopener')}
+        >
+          <Play className="h-4 w-4 mr-2" />
+          Open Live Stream
+        </Button>
+        <p className="text-[10px] text-gray-500 text-center max-w-[200px]">
+          HTTPS blocks local camera feeds. Click above to open in a new tab.
+        </p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4 bg-black text-white">
+        <Camera className="h-8 w-8 text-yellow-400" />
+        <p className="text-xs text-gray-400 text-center">Camera web UI not available</p>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => { setLoadError(false); }}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <iframe
+      src={`http://${ip}`}
+      className="w-full h-full border-0 bg-black"
+      title={name}
+      sandbox="allow-same-origin allow-scripts allow-forms"
+      onError={() => setLoadError(true)}
+    />
+  );
+};
+
 const Cameras = () => {
   const { t, language } = useLanguage();
   const { data: cameras, isLoading } = useCameras();
   const createCamera = useCreateCamera();
   const updateCamera = useUpdateCamera();
   const deleteCamera = useDeleteCamera();
-  
+
   const [formOpen, setFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [newCamera, setNewCamera] = useState({ name: '', location: '', camera_id: '' });
   const [testingConnection, setTestingConnection] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, 'success' | 'failed' | null>>({});
-  const [fullscreenCam, setFullscreenCam] = useState<string | null>(null);
+  const [fullscreenCam, setFullscreenCam] = useState<{ ip: string; name: string } | null>(null);
 
   const onlineCount = cameras?.filter(c => c.status === 'online').length || 0;
 
@@ -73,36 +128,31 @@ const Cameras = () => {
   const testConnection = async (cameraId: string, ip: string) => {
     setTestingConnection(cameraId);
     setConnectionStatus(prev => ({ ...prev, [cameraId]: null }));
-    
+
     try {
-      // Create a controller for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      // Try to fetch the camera's web interface
-      // We use mode: 'no-cors' because camera web interfaces don't support CORS
-      // This will throw if the connection times out or fails
-      await fetch(`http://${ip}`, { 
+
+      await fetch(`http://${ip}`, {
         mode: 'no-cors',
-        signal: controller.signal 
+        signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
-      
-      // If we get here, the request was sent (no-cors doesn't let us see the response)
+
       setConnectionStatus(prev => ({ ...prev, [cameraId]: 'success' }));
       toast({
         title: language === 'bn' ? 'সংযোগ সফল' : 'Connection Successful',
-        description: language === 'bn' 
-          ? `ক্যামেরা ${ip} এ সাড়া দিচ্ছে` 
+        description: language === 'bn'
+          ? `ক্যামেরা ${ip} এ সাড়া দিচ্ছে`
           : `Camera at ${ip} is responding`,
       });
     } catch (error) {
       setConnectionStatus(prev => ({ ...prev, [cameraId]: 'failed' }));
       toast({
         title: language === 'bn' ? 'সংযোগ ব্যর্থ' : 'Connection Failed',
-        description: language === 'bn' 
-          ? `ক্যামেরা ${ip} এ পৌঁছানো যাচ্ছে না। নেটওয়ার্ক চেক করুন।` 
+        description: language === 'bn'
+          ? `ক্যামেরা ${ip} এ পৌঁছানো যাচ্ছে না। নেটওয়ার্ক চেক করুন।`
           : `Cannot reach camera at ${ip}. Check your network connection.`,
         variant: 'destructive',
       });
@@ -125,7 +175,6 @@ const Cameras = () => {
 
   const openInVLC = (ip: string, name: string) => {
     const rtspUrl = `rtsp://${ip}:554/live/ch00_0`;
-    // Create a .m3u playlist file that VLC will open
     const playlistContent = `#EXTM3U\n#EXTINF:-1,${name}\n${rtspUrl}`;
     const blob = new Blob([playlistContent], { type: 'audio/x-mpegurl' });
     const url = URL.createObjectURL(blob);
@@ -138,19 +187,19 @@ const Cameras = () => {
     URL.revokeObjectURL(url);
     toast({
       title: language === 'bn' ? 'ফাইল ডাউনলোড হয়েছে' : 'File Downloaded',
-      description: language === 'bn' 
-        ? 'ডাউনলোড করা .m3u ফাইলটি খুলুন - VLC স্বয়ংক্রিয়ভাবে শুরু হবে' 
+      description: language === 'bn'
+        ? 'ডাউনলোড করা .m3u ফাইলটি খুলুন - VLC স্বয়ংক্রিয়ভাবে শুরু হবে'
         : 'Open the downloaded .m3u file - VLC will start automatically',
     });
   };
 
   return (
     <MainLayout>
-      <Header 
-        title={t.cameras.title} 
+      <Header
+        title={t.cameras.title}
         subtitle={t.cameras.subtitle}
       />
-      
+
       <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in">
         {/* Summary */}
         <div className="grid grid-cols-3 gap-2 md:gap-4">
@@ -177,9 +226,13 @@ const Cameras = () => {
             <div className="flex-1">
               <h3 className="font-medium text-foreground">{t.cameras.cameraIntegration}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {language === 'bn'
-                  ? 'ক্যামেরা দেখতে Snapshot/MJPEG/Web UI মোড ব্যবহার করুন। HTTPS সাইটে লোকাল ক্যামেরা দেখতে হলে সরাসরি ক্যামেরার IP ব্রাউজারে খুলুন অথবা VLC ব্যবহার করুন।'
-                  : 'Use Snapshot/MJPEG/Web UI modes to view cameras. For local cameras on HTTPS sites, open the camera IP directly in a new tab or use VLC for RTSP streaming.'}
+                {isSecure
+                  ? (language === 'bn'
+                    ? 'HTTPS সাইটে লোকাল ক্যামেরা সরাসরি এম্বেড করা যায় না। "Open Live Stream" বাটনে ক্লিক করে নতুন ট্যাবে দেখুন, অথবা VLC দিয়ে RTSP স্ট্রিম দেখুন।'
+                    : 'Local cameras cannot be embedded on HTTPS. Click "Open Live Stream" to view in a new tab, or use VLC for RTSP streaming.')
+                  : (language === 'bn'
+                    ? 'ক্যামেরার লাইভ ফিড নীচে দেখানো হচ্ছে। ফুলস্ক্রিন দেখতে বোতাম ক্লিক করুন।'
+                    : 'Live camera feeds are shown below. Click the fullscreen button to expand.')}
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <Button size="sm" onClick={() => setFormOpen(true)}>
@@ -206,35 +259,24 @@ const Cameras = () => {
             {cameras?.map((camera) => (
               <Card key={camera.id} className="stat-card border-0 overflow-hidden">
                 {/* Camera Preview */}
-                <div className="aspect-video bg-muted/30 relative flex items-center justify-center">
+                <div className="aspect-video bg-black relative overflow-hidden">
                   {camera.status === 'online' && camera.camera_id ? (
-                    <div className="text-center p-4 space-y-3">
-                      <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto">
-                        <Camera className="h-8 w-8 text-success" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{camera.name}</p>
-                        <p className="text-sm text-muted-foreground">{camera.camera_id}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => window.open(`http://${camera.camera_id}`, '_blank')}
-                      >
-                        <Play className="h-4 w-4 mr-2" />
-                        {language === 'bn' ? 'লাইভ দেখুন' : 'Open Live View'}
-                      </Button>
-                    </div>
+                    <CameraStream ip={camera.camera_id} name={camera.name} />
                   ) : camera.status === 'online' ? (
-                    <div className="text-center p-4">
-                      <Camera className="h-12 w-12 text-muted-foreground/50 mx-auto" />
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {language === 'bn' ? 'IP ঠিকানা যুক্ত করুন' : 'Add IP address to view'}
-                      </p>
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/30">
+                      <div className="text-center p-4">
+                        <Camera className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {language === 'bn' ? 'IP ঠিকানা যুক্ত করুন' : 'Add IP address to view'}
+                        </p>
+                      </div>
                     </div>
                   ) : (
-                    <div className="text-center">
-                      <WifiOff className="h-12 w-12 text-destructive/50 mx-auto" />
-                      <p className="text-xs text-destructive mt-2">{t.cameras.offline}</p>
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/30">
+                      <div className="text-center">
+                        <WifiOff className="h-12 w-12 text-destructive/50 mx-auto" />
+                        <p className="text-xs text-destructive mt-2">{t.cameras.offline}</p>
+                      </div>
                     </div>
                   )}
 
@@ -251,21 +293,34 @@ const Cameras = () => {
                       <><WifiOff className="h-3 w-3 mr-1" /> {t.cameras.offline}</>
                     )}
                   </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 left-2 h-8 w-8 bg-background/80 hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setDeleteId(camera.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 bg-background/80 hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={() => setDeleteId(camera.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    {camera.status === 'online' && camera.camera_id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 bg-background/80"
+                        onClick={() => setFullscreenCam({ ip: camera.camera_id!, name: camera.name })}
+                        title={language === 'bn' ? 'পূর্ণ স্ক্রিন' : 'Fullscreen'}
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                
+
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center justify-between">
                     {camera.name}
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => handleToggleStatus(camera)}
                     >
@@ -274,15 +329,15 @@ const Cameras = () => {
                   </CardTitle>
                   <CardDescription>{camera.location}</CardDescription>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-3">
                   {camera.camera_id && (
                     <div className="p-3 rounded-lg bg-muted/50 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">IP: {camera.camera_id}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7"
                           onClick={() => copyToClipboard(camera.camera_id!)}
                         >
@@ -291,9 +346,9 @@ const Cameras = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">RTSP: rtsp://{camera.camera_id}:554/live/ch00_0</span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7"
                           onClick={() => copyToClipboard(`rtsp://${camera.camera_id}:554/live/ch00_0`)}
                         >
@@ -302,11 +357,11 @@ const Cameras = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="grid grid-cols-4 gap-1 md:gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full text-xs md:text-sm px-1 md:px-3"
                       disabled={!camera.camera_id || testingConnection === camera.id}
                       onClick={() => camera.camera_id && testConnection(camera.id, camera.camera_id)}
@@ -322,9 +377,9 @@ const Cameras = () => {
                       )}
                       <span className="hidden md:inline ml-2">{language === 'bn' ? 'টেস্ট' : 'Test'}</span>
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full text-xs md:text-sm px-1 md:px-3"
                       disabled={!camera.camera_id || camera.status === 'offline'}
                       onClick={() => camera.camera_id && openCameraWeb(camera.camera_id)}
@@ -332,9 +387,9 @@ const Cameras = () => {
                       <Monitor className="h-3 w-3 md:h-4 md:w-4" />
                       <span className="hidden md:inline ml-2">{language === 'bn' ? 'ওয়েব' : 'Web'}</span>
                     </Button>
-                    <Button 
-                      variant="default" 
-                      size="sm" 
+                    <Button
+                      variant="default"
+                      size="sm"
                       className="w-full text-xs md:text-sm px-1 md:px-3"
                       disabled={!camera.camera_id || camera.status === 'offline'}
                       onClick={() => camera.camera_id && openInVLC(camera.camera_id, camera.name)}
@@ -342,9 +397,9 @@ const Cameras = () => {
                       <Play className="h-3 w-3 md:h-4 md:w-4" />
                       <span className="hidden md:inline ml-2">VLC</span>
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full text-xs md:text-sm px-1 md:px-3"
                       disabled={!camera.camera_id}
                       onClick={() => camera.camera_id && copyToClipboard(camera.camera_id)}
@@ -353,18 +408,50 @@ const Cameras = () => {
                       <span className="hidden md:inline ml-2">{language === 'bn' ? 'অ্যাপ' : 'App'}</span>
                     </Button>
                   </div>
-                  
-                  <p className="text-xs text-muted-foreground text-center">
-                    {language === 'bn' 
-                      ? 'টেস্ট বাটনে ক্লিক করে সংযোগ যাচাই করুন, তারপর VLC তে দেখুন'
-                      : 'Click Test to verify connection, then view in VLC'}
-                  </p>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Fullscreen Camera Dialog */}
+      {fullscreenCam && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          <div className="flex items-center justify-between p-3 bg-black/90">
+            <div className="flex items-center gap-2 text-white">
+              <Camera className="h-5 w-5 text-green-400" />
+              <span className="font-medium">{fullscreenCam.name}</span>
+              <span className="text-sm text-gray-400">({fullscreenCam.ip})</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20"
+              onClick={() => setFullscreenCam(null)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="flex-1">
+            {isSecure ? (
+              <iframe
+                src={`http://${fullscreenCam.ip}`}
+                className="w-full h-full border-0"
+                title={fullscreenCam.name}
+                sandbox="allow-same-origin allow-scripts allow-forms"
+              />
+            ) : (
+              <iframe
+                src={`http://${fullscreenCam.ip}`}
+                className="w-full h-full border-0"
+                title={fullscreenCam.name}
+                sandbox="allow-same-origin allow-scripts allow-forms"
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add Camera Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
@@ -375,31 +462,31 @@ const Cameras = () => {
           <div className="space-y-4">
             <div>
               <Label>{t.common.name}</Label>
-              <Input 
-                value={newCamera.name} 
+              <Input
+                value={newCamera.name}
                 onChange={(e) => setNewCamera({ ...newCamera, name: e.target.value })}
                 placeholder="Main Gate Camera"
               />
             </div>
             <div>
               <Label>{t.cameras.location}</Label>
-              <Input 
-                value={newCamera.location} 
+              <Input
+                value={newCamera.location}
                 onChange={(e) => setNewCamera({ ...newCamera, location: e.target.value })}
                 placeholder="Building Entrance"
               />
             </div>
             <div>
               <Label>{language === 'bn' ? 'ক্যামেরা IP ঠিকানা' : 'Camera IP Address'}</Label>
-              <Input 
-                value={newCamera.camera_id} 
+              <Input
+                value={newCamera.camera_id}
                 onChange={(e) => setNewCamera({ ...newCamera, camera_id: e.target.value })}
                 placeholder="192.168.1.100"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                {language === 'bn' 
-                  ? 'আপনার V380 Pro ক্যামেরার IP ঠিকানা লিখুন'
-                  : 'Enter your V380 Pro camera IP address'}
+                {language === 'bn'
+                  ? 'আপনার ক্যামেরার IP ঠিকানা লিখুন'
+                  : 'Enter your camera IP address'}
               </p>
             </div>
           </div>
